@@ -1,0 +1,43 @@
+﻿@model VesnaStore.Models.User
+@{
+    ViewData["Title"] = "Регистрация";
+}
+
+<div class="auth-page">
+    <div class="auth-card">
+        <h2>Регистрация</h2>
+        <form asp-action="Register" method="post">
+            <div class="auth-form-group">
+                <label>Имя</label>
+                <input asp-for="FullName" class="auth-input" required />
+            </div>
+
+            <div class="auth-form-group">
+                <label>Email</label>
+                <input asp-for="Email" class="auth-input" required />
+            </div>
+
+            <div class="auth-form-group">
+                <label>Пароль</label>
+                <input asp-for="Password" type="password" class="auth-input" required />
+            </div>
+
+            <div class="auth-form-group">
+                <label>Повторите пароль</label>
+                <input asp-for="ConfirmPassword" type="password" class="auth-input" required />
+                <span asp-validation-for="ConfirmPassword" style="color:red; font-size:0.7rem;"></span>
+            </div>
+            <div class="auth-form-group" style="display: flex; gap: 10px; align-items: flex-start; margin-top: 20px; text-align: left;">
+                <input asp-for="AcceptTerms" type="checkbox" id="consent-check" style="margin-top: 4px; cursor: pointer;" />
+                <label for="consent-check" style="font-size: 0.7rem; color: #888; text-transform: none; letter-spacing: 0; line-height: 1.4; font-weight: 400; cursor: pointer;">
+                    Я даю согласие на обработку
+                    <a href="/Home/Privacy" target="_blank" style="color: var(--rose); text-decoration: underline;">персональных данных</a>,
+                    соглашаюсь с <a href="/Home/Privacy" target="_blank" style="color: var(--rose); text-decoration: underline;">Политикой в отношении обработки персональных данных ИП Кокорина С.В.</a>
+                    и использованием <a href="/Home/Cookies" target="_blank" style="color: var(--rose); text-decoration: underline;">файлов cookie</a>.
+                </label>
+            </div>
+            <span asp-validation-for="AcceptTerms" style="color:red; font-size:0.7rem; display: block; margin-top: 5px;"></span>
+            <button type="submit" class="btn-auth">Создать аккаунт</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,166 @@
+﻿@model IEnumerable<VesnaStore.Models.Review>
+@{
+    ViewData["Title"] = "Модерация отзывов — Панель управления";
+    Layout = "_AdminLayout";
+}
+
+<div class="form-container-limited" style="max-width:1200px;">
+    <div class="page-header">
+        <h1>Модерация отзывов</h1>
+        <p style="color: #999; font-size: 0.9rem; margin-top: 5px;">Здесь вы можете скрывать отзывы, содержащие маты, спам или нецензурные изображения/фото казино</p>
+    </div>
+
+    @* ОБЯЗАТЕЛЬНО: Токен для JS функции fetch *@
+    @Html.AntiForgeryToken()
+
+    <div class="content-card form-card" style="padding:0; overflow:hidden;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Товар</th>
+                    <th>Рейтинг</th>
+                    <th>Текст отзыва</th>
+                    <th>Фото отзыва</th>
+                    <th>Статус</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var review in Model)
+                    {
+                        bool isVisible = review.IsApproved;
+
+                        <tr id="review-row-@review.ReviewID" style="@(isVisible ? "background: transparent; opacity: 1;" : "background: #fbfbfb; opacity: 0.7;")">
+                            <td style="max-width: 180px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <img src="@review.Product?.ImageURL" style="width:40px; height:50px; object-fit:cover; border-radius:6px;" />
+                                    <span style="font-weight:700; font-size:0.85rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@(review.Product?.Title ?? "Неизвестный товар")</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="color: #f1c40f; white-space: nowrap;">
+                                    @for (int i = 0; i < review.Rating; i++)
+                                    {
+                                        <i class="fa-solid fa-star" style="font-size:0.75rem;"></i>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <p style="margin:0; font-size:0.9rem; color:#333; line-height:1.4; max-width:350px; word-break:break-word;">
+                                    @review.Comment
+                                </p>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(review.ReviewImageUrl))
+                                {
+                                    <div style="position: relative; width: 60px; height: 60px; cursor: pointer; overflow: hidden; border-radius: 8px; border: 2px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05);"
+                                         onclick="viewFullReviewImage('@review.ReviewImageUrl', '@(review.Product?.Title?.Replace("'", "\\'"))')">
+                                        <img src="@review.ReviewImageUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">
+                                            <i class="fa-solid fa-magnifying-glass-plus" style="color: #fff; font-size: 0.9rem;"></i>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span style="color: #ccc; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Без фото</span>
+                                }
+                            </td>
+                            <td id="status-cell-@review.ReviewID">
+                                @if (isVisible)
+                                {
+                                    <span class="badge-cat status-online" style="color: #27ae60; background: rgba(39, 174, 96, 0.08); font-weight:700;">АКТИВЕН</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-cat status-offline" style="color: #ff4d4d; background: rgba(255, 77, 77, 0.08); font-weight:700;">СКРЫТ</span>
+                                }
+                            </td>
+                            <td>
+                                <button type="button"
+                                        class="btn-submit"
+                                        id="btn-toggle-@review.ReviewID"
+                                        style="padding: 8px 15px; font-size: 0.75rem; font-weight: 700; border-radius: 8px; width: auto; margin: 0; background: @(isVisible ? "#111" : "#27ae60");"
+                                        onclick="toggleReview(@review.ReviewID)">
+                                    @(isVisible ? "СКРЫТЬ" : "ПОКАЗАТЬ")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:30px; color:#999;">Отзывов пока нет</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Функция для просмотра фото отзыва в полный размер
+    function viewFullReviewImage(imgUrl, productTitle) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: productTitle || 'Фото к отзыву',
+                imageUrl: imgUrl,
+                imageAlt: 'Изображение отзыва',
+                confirmButtonText: 'ЗАКРЫТЬ',
+                confirmButtonColor: '#111',
+                customClass: {
+                    popup: 'vesna-popup',
+                    title: 'vesna-title'
+                }
+            });
+        } else {
+            window.open(imgUrl, '_blank');
+        }
+    }
+
+    function toggleReview(reviewId) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const btn = document.getElementById(`btn-toggle-${reviewId}`);
+        const row = document.getElementById(`review-row-${reviewId}`);
+        const statusCell = document.getElementById(`status-cell-${reviewId}`);
+
+        // Упаковываем токен в FormData
+        const formData = new FormData();
+        if (token) {
+            formData.append('__RequestVerificationToken', token);
+        }
+
+        fetch(`/Admin/ToggleReviewVisibility/${reviewId}`, {
+            method: 'POST',
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.isVisible) {
+                        btn.innerText = "СКРЫТЬ";
+                        btn.style.background = "#111";
+                        row.style.background = "transparent";
+                        row.style.opacity = "1";
+                        statusCell.innerHTML = `<span class="badge-cat status-online" style="color: #27ae60; background: rgba(39, 174, 96, 0.08); font-weight:700;">АКТИВЕН</span>`;
+                    } else {
+                        btn.innerText = "ПОКАЗАТЬ";
+                        btn.style.background = "#27ae60";
+                        row.style.background = "#fbfbfb";
+                        row.style.opacity = "0.7";
+                        statusCell.innerHTML = `<span class="badge-cat status-offline" style="color: #ff4d4d; background: rgba(255, 77, 77, 0.08); font-weight:700;">СКРЫТ</span>`;
+                    }
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'success', title: 'Готово', text: data.message, timer: 1500, showConfirmButton: false });
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => console.error("Ошибка при модерации отзыва:", err));
+    }
+</script>

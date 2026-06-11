@@ -1,0 +1,81 @@
+﻿@model IEnumerable<VesnaStore.Models.PromoCode>
+@{
+    ViewData["Title"] = "Управление промокодами";
+    Layout = "_AdminLayout";
+}
+
+<div class="form-container-limited" style="max-width:1100px;">
+    <div class="page-header">
+        <h1>Управление промокодами</h1>
+        <p style="color: #999; font-size: 0.9rem; margin-top: 5px;">Создавайте и отслеживайте лимиты скидочных купонов для магазина</p>
+    </div>
+
+    <div class="add-cat-card" style="background:#fff; padding:25px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.02); margin-bottom:30px;">
+        <h3 style="margin-top:0; margin-bottom:20px; font-size:1.1rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Генератор купонов</h3>
+
+        <form method="post" action="/Admin/CreatePromoCode">
+            @Html.AntiForgeryToken()
+            <div class="vesna-row-grid">
+                <div class="v-cell">
+                    <label class="form-group label">Название промокода</label>
+                    <input type="text" name="Code" class="admin-input" placeholder="Напр: VESNA2026" required />
+                </div>
+                <div class="v-cell">
+                    <label class="form-group label">Скидка (₽)</label>
+                    <input type="number" step="1" name="DiscountAmount" class="admin-input" placeholder="500" required />
+                </div>
+            </div>
+            <div class="vesna-row-grid">
+                <div class="v-cell">
+                    <label class="form-group label">Минимальная сумма заказа (₽)</label>
+                    <input type="number" step="1" name="MinOrderAmount" class="admin-input" placeholder="От 3000" required />
+                </div>
+                <div class="v-cell">
+                    <label class="form-group label">Количество использований</label>
+                    <input type="number" name="MaxUses" class="admin-input" placeholder="100" required />
+                </div>
+            </div>
+            <button type="submit" class="btn-submit" style="width:100%; padding:15px; border-radius:12px; font-weight:700; font-size:0.9rem; letter-spacing:1px; text-transform:uppercase; margin-top:10px;">Сгенерировать промокод</button>
+        </form>
+    </div>
+
+    <div class="content-card form-card" style="padding:0; overflow:hidden;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Промокод</th>
+                    <th>Скидка</th>
+                    <th>Мин. заказ</th>
+                    <th>Использовано</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var promo in Model)
+                    {
+                        <tr>
+                            <td style="font-weight: 700;">@promo.Code</td>
+                            <td>@promo.DiscountAmount.ToString("N0") ₽</td>
+                            <td>@promo.MinOrderAmount.ToString("N0") ₽</td>
+                            <td>@promo.UsedCount / @promo.MaxUses</td>
+                            <td>
+                                <form method="post" action="/Admin/DeletePromoCode" onsubmit="return confirm('Удалить?');">
+                                    <input type="hidden" name="id" value="@promo.PromoCodeID" />
+                                    <button type="submit" style="background:none; border:none; color:#e74c3c; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:30px; color:#999;">Активных промокодов пока нет</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

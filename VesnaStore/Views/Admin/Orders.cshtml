@@ -1,0 +1,80 @@
+﻿@model IEnumerable<VesnaStore.Models.Order>
+@{
+    ViewData["Title"] = "Управление заказами";
+    Layout = "_AdminLayout";
+}
+
+<div class="orders-container">
+    <div class="page-header">
+        <h1>Управление заказами</h1>
+        <p style="color: #999; font-size: 0.85rem; margin-top: 5px;">Всего в системе: @Model.Count()</p>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 20px;">
+            <p style="color: #999;">Новых заказов пока нет</p>
+        </div>
+    }
+    else
+    {
+        <div class="orders-card">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Заказ</th>
+                        <th>Клиент</th>
+                        <th>Адрес</th>
+                        <th>Состав</th>
+                        <th>Сумма</th>
+                        <th style="width: 220px;">Статус и Трек</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span class="order-id">#@order.OrderID</span>
+                                <span style="font-size: 0.7rem; color: #bbb;">@order.OrderDate.ToString("dd.MM.yy HH:mm")</span>
+                            </td>
+                            <td>
+                                <span style="font-weight: 600; color: #111;">@order.User?.FullName</span>
+                                <a href="tel:@order.Phone" class="contact-link"><i class="fa-solid fa-phone"></i> @order.Phone</a>
+                            </td>
+                            <td><div style="font-size: 0.85rem; color: #666; max-width: 200px;">@order.Address</div></td>
+                            <td>
+                                @if (order.OrderItems != null)
+                                {
+                                    @foreach (var item in order.OrderItems)
+                                    {
+                                        <div class="product-line">
+                                            • @(item.Product?.ArticleNumber ?? "---") — @(item.Product?.Title ?? "Товар удален") (@item.Quantity шт)
+                                        </div>
+                                    }
+                                }
+                            </td>
+                            <td><span class="price-total">@order.TotalAmount.ToString("N0") ₽</span></td>
+                            <td>
+                                <form asp-action="UpdateStatus" asp-controller="Admin" method="post" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="hidden" name="orderId" value="@order.OrderID" />
+
+                                    <select name="status" class="status-select">
+                                        <!option value="Новый" @(order.Status == "Новый" ? "selected" : "")>Новый</!option>
+                                        <!option value="В работе" @(order.Status == "В работе" ? "selected" : "")>В работе</!option>
+                                        <!option value="Отправлен" @(order.Status == "Отправлен" ? "selected" : "")>Отправлен</!option>
+                                        <!option value="Завершен" @(order.Status == "Завершен" ? "selected" : "")>Завершен</!option>
+                                        <!option value="Отменен" @(order.Status == "Отменен" ? "selected" : "")>Отменен</!option>
+                                    </select>
+
+                                    <input type="text" name="trackingNumber" value="@order.TrackingNumber" class="track-input" placeholder="Трек-номер">
+                                    <button type="submit" class="btn-update">СОХРАНИТЬ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

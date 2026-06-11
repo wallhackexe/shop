@@ -1,0 +1,98 @@
+﻿@model IEnumerable<VesnaStore.Models.Product>
+@{
+    ViewData["Title"] = "Управление товарами";
+    Layout = "_AdminLayout";
+}
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-store"></i></div>
+        <div class="stat-info">
+            <h4>Товары</h4>
+            <p>@Model.Count()</p>
+        </div>
+    </div>
+
+    <a href="/Admin/Orders" style="text-decoration: none; color: inherit;">
+        <div class="stat-card" style="border-color: #fdf2f2;">
+            <div class="stat-icon" style="background: #fdf2f2; color: #DCAEAE;"><i class="fa-solid fa-truck-fast"></i></div>
+            <div class="stat-info">
+                <h4>Заказы</h4>
+                <p>@(ViewBag.TotalOrdersCount ?? 0)</p>
+            </div>
+        </div>
+    </a>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-tags"></i></div>
+        <div class="stat-info">
+            <h4>Категории</h4>
+            <p>@(ViewBag.TotalCategoriesCount ?? 0)</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
+        <div class="stat-info">
+            <h4>Средний чек</h4>
+            <p>@(Model.Any() ? Math.Round(Model.Average(m => m.Price)) : 0) ₽</p>
+        </div>
+    </div>
+</div>
+
+<div class="table-header">
+    <h2 class="header-title">Список товаров на продаже</h2>
+    <div class="action-buttons">
+        <a href="/Admin/Orders" class="btn-add btn-secondary">
+            <i class="fa-solid fa-cart-shopping"></i> Заказы
+        </a>
+        <a href="/Admin/Create" class="btn-add">
+            <i class="fa-solid fa-plus"></i> Товар
+        </a>
+    </div>
+</div>
+
+<div class="content-card">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Товар</th>
+                <th>Категория</th>
+                <th>Материал</th>
+                <th>Цена</th>
+                <th style="text-align: right;">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <img src="@item.ImageURL" class="product-img" style="width:50px; height:65px; object-fit:cover; border-radius:8px;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #111; line-height: 1.2;">@item.Title</div>
+                                <div style="font-size: 0.7rem; color: #aaa; margin-top: 2px;">ID: @item.ProductID</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge-cat">@(item.Category?.Name ?? "—")</span></td>
+                    <td style="color: #888;">@(item.Material ?? "—")</td>
+                    <td style="font-weight: 800; color: #111;">@item.Price.ToString("N0") ₽</td>
+                    <td style="text-align: right;">
+                        <div class="action-icons" style="justify-content: flex-end; display: flex; gap: 10px;">
+                            <a asp-action="Edit" asp-route-id="@item.ProductID" style="color: #111;">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@item.ProductID" method="post" onsubmit="return confirm('Удалить этот товар?')">
+                                <button type="submit" style="background:none; border:none; color:#e74c3c; cursor:pointer;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,181 @@
+﻿@model IEnumerable<VesnaStore.Models.Product>
+@{
+    ViewData["Title"] = "Каталог — VESNA";
+    Layout = "_Layout";
+
+    // Получаем список лайкнутых товаров пользователя для корректного отображения сердечек
+    var userFavs = ViewBag.UserFavorites as List<int> ?? new List<int>();
+}
+
+<div class="container catalog-wrapper">
+    <div style="text-align: center; margin-bottom: 50px;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 3rem; margin-bottom: 15px;">Каталог</h1>
+        <p style="color: #999; font-size: 0.9rem;">Найдено позиций: @Model.Count()</p>
+    </div>
+
+    <div class="mobile-controls">
+        <button class="btn-filter-trigger" onclick="toggleMobileFilters()">
+            <i class="fa-solid fa-sliders"></i> ФИЛЬТРЫ
+        </button>
+    </div>
+
+    <div class="catalog-layout">
+        <aside class="filter-sidebar" id="filterSidebar">
+            <button class="close-filters" onclick="toggleMobileFilters()">&times;</button>
+
+            <form method="get" action="/Home/Catalog">
+                <input type="hidden" name="sort" value="@Context.Request.Query["sort"]" />
+
+                <div class="filter-section">
+                    <span class="filter-title">Поиск</span>
+                    <input type="text" name="search" value="@Context.Request.Query["search"]" placeholder="Название или артикул" class="price-input">
+                </div>
+
+                <div class="filter-section">
+                    <span class="filter-title">Категория</span>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <a href="/Home/Catalog?search=@Context.Request.Query["search"]&minPrice=@Context.Request.Query["minPrice"]&maxPrice=@Context.Request.Query["maxPrice"]&sort=@Context.Request.Query["sort"]" 
+                           style="text-decoration: none; color: @(string.IsNullOrEmpty(Context.Request.Query["categoryId"]) ? "#DCAEAE" : "#666"); font-size: 0.9rem; font-weight: @(string.IsNullOrEmpty(Context.Request.Query["categoryId"]) ? "700" : "400");">Все товары</a>
+                        
+                        @foreach (var cat in (IEnumerable<VesnaStore.Models.Category>)ViewBag.Categories)
+                        {
+                            <a href="/Home/Catalog?categoryId=@cat.CategoryID&search=@Context.Request.Query["search"]&minPrice=@Context.Request.Query["minPrice"]&maxPrice=@Context.Request.Query["maxPrice"]&sort=@Context.Request.Query["sort"]"
+                               style="text-decoration: none; color: @(Context.Request.Query["categoryId"] == cat.CategoryID.ToString() ? "#DCAEAE" : "#666"); font-size: 0.9rem; font-weight: @(Context.Request.Query["categoryId"] == cat.CategoryID.ToString() ? "700" : "400");">
+                                @cat.Name
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <span class="filter-title">Размер (RU / EU)</span>
+                    <div class="size-grid">
+                        @{
+                            var sizeMap = new List<(string Key, string Ru, string Eu)>
+                            {
+                                ("XS", "40", "34"), ("S", "42", "36"), ("M", "44", "38"),
+                                ("L", "46", "40"), ("XL", "48", "42"), ("XXL", "50", "44")
+                            };
+                        }
+                        @foreach (var s in sizeMap)
+                        {
+                            <label class="size-option">
+                                <input type="radio" name="size" value="@s.Key" onchange="this.form.submit()" @(Context.Request.Query["size"] == s.Key ? "checked" : "")>
+                                <div class="size-box">
+                                    <span class="main-s">@s.Key</span>
+                                    <span class="sub-s">@s.Ru/@s.Eu</span>
+                                </div>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <span class="filter-title">Бюджет (₽)</span>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" name="minPrice" value="@Context.Request.Query["minPrice"]" placeholder="От" class="price-input">
+                        <input type="number" name="maxPrice" value="@Context.Request.Query["maxPrice"]" placeholder="До" class="price-input">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-main" style="width: 100%; border: none; padding: 15px; background: #111; color: #fff; border-radius: 12px; font-weight: 600; cursor: pointer;">ПРИМЕНИТЬ</button>
+                <a href="/Home/Catalog" style="display: block; text-align: center; margin-top: 15px; font-size: 0.8rem; color: #aaa; text-decoration: none;">Сбросить всё</a>
+            </form>
+        </aside>
+
+        <div class="catalog-content">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+                <form method="get" action="/Home/Catalog" id="sortForm">
+                    <input type="hidden" name="search" value="@Context.Request.Query["search"]" />
+                    <input type="hidden" name="categoryId" value="@Context.Request.Query["categoryId"]" />
+                    <input type="hidden" name="size" value="@Context.Request.Query["size"]" />
+                    <input type="hidden" name="minPrice" value="@Context.Request.Query["minPrice"]" />
+                    <input type="hidden" name="maxPrice" value="@Context.Request.Query["maxPrice"]" />
+
+                    <select name="sort" onchange="document.getElementById('sortForm').submit()" class="price-input" style="width: 180px; padding: 8px 12px; cursor: pointer;">
+                        <option value="">По умолчанию</option>
+                        <option value="newest" selected="@(Context.Request.Query["sort"] == "newest" ? "selected" : null)">Новинки</option>
+                        <option value="price_asc" selected="@(Context.Request.Query["sort"] == "price_asc" ? "selected" : null)">Дешевле</option>
+                        <option value="price_desc" selected="@(Context.Request.Query["sort"] == "price_desc" ? "selected" : null)">Дороже</option>
+                    </select>
+                </form>
+            </div>
+
+            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 40px 25px;">
+                @foreach (var item in Model)
+                {
+                    bool isLiked = userFavs.Contains(item.ProductID);
+
+                    <div class="product-card"
+                         style="position: relative;"
+                         data-id="@item.ProductID"
+                         data-name="@item.Title"
+                         data-price="@item.Price"
+                         data-cat="@(item.Category?.Name ?? "Без категории")"
+                         data-desc="@item.Description"
+                         data-additional="@item.AdditionalImages">
+
+                        @* КНОПКА ИЗБРАННОГО (СЕРДЕЧКО) *@
+                        <button class="wishlist-heart @(isLiked ? "active" : "")" 
+                                onclick="toggleLike(@item.ProductID, this)" 
+                                style="position: absolute; top: 15px; right: 15px; z-index: 5; background: none; border: none; cursor: pointer;">
+                            <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart"></i>
+                        </button>
+
+                        <div class="product-image-box">
+                            <img src="@item.ImageURL" alt="@item.Title" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 15px;">
+                            <div class="image-hover-actions">
+                                <button class="btn-quick-view-v2 btn-quick-view" onclick="openV2Modal(this.closest('.product-card'))">ПРОСМОТР</button>
+                            </div>
+                        </div>
+
+                        <div class="product-details" style="padding: 15px 5px;">
+                            <span class="product-category" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px;">
+                                @(item.Category?.Name?.ToUpper() ?? "БЕЗ КАТЕГОРИИ")
+                            </span>
+                            <h3 class="product-title" style="font-size: 1rem; font-weight: 500; margin: 5px 0 10px; cursor: pointer;" onclick="openV2Modal(this.closest('.product-card'))">@item.Title</h3>
+
+                            @* ВОССТАНОВЛЕННЫЙ БЛОК РЕЙТИНГА И ЗВЕЗД ДЛЯ КАТАЛОГА *@
+                            <div class="product-rating" style="margin-bottom: 10px;">
+                                @for (int index = 0; index < 5; ++index)
+                                {
+                                    <i class="fa-solid fa-star" style="color: #f1c40f; font-size: 0.8rem;"></i>
+                                }
+                                <span class="rating-value" style="font-size: 0.8rem; color: #aaa; margin-left: 5px;">
+                                    @{
+                                        // Фильтруем только одобренные отзывы
+                                        var approvedReviews = item.Reviews?.Where(r => r.IsApproved).ToList();
+                                        int count = approvedReviews?.Count ?? 0;
+                                        double avgRating = count > 0 ? approvedReviews.Average(r => r.Rating) : 5.0;
+                                    }
+                                    @avgRating.ToString("F1")
+
+                                    @if (count > 0)
+                                    {
+                                        <span class="reviews-num" style="font-weight: 600; color: #444;">(@count)</span>
+                                    }
+                                </span>
+                            </div>
+
+                            <div class="product-price-row" style="display: flex; justify-content: space-between; align-items: center; height: 35px;">
+                                <span class="price" style="font-weight: 700; font-size: 1.1rem;">@item.Price.ToString("N0") ₽</span>
+
+                                <div class="cart-controls-wrapper" data-product-id="@item.ProductID">
+                                    <button class="btn-add-cart initial-add-btn" data-id="@item.ProductID">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+
+                                    <div class="qty-controls" style="display: none;">
+                                        <button class="qty-btn minus"><i class="fa-solid fa-minus"></i></button>
+                                        <span class="qty-val">1</span>
+                                        <button class="qty-btn plus"><i class="fa-solid fa-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

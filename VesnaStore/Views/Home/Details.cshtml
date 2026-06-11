@@ -1,0 +1,319 @@
+﻿@using System.Linq
+@model VesnaStore.Models.Product
+@{
+    ViewData["Title"] = Model.Title + " — VESNA";
+    Layout = "_Layout";
+
+    // ПРОВЕРКА ЛАЙКА ИЗБРАННОГО
+    var userFavs = ViewBag.UserFavorites as List<int> ?? new List<int>();
+    bool isMainLiked = userFavs.Contains(Model.ProductID);
+
+    var colorHex = Model.Color?.ToLower().Trim() switch
+    {
+        "черный" => "#000000",
+        "белый" => "#FFFFFF",
+        "серый" => "#808080",
+        "серебристый" => "#C0C0C0",
+        "бежевый" => "#F5F5DC",
+        "песочный" => "#C2B280",
+        "кремовый" => "#FFFDD0",
+        "айвори" => "#FFFFF0",
+        "розовый" => "#FFC0CB",
+        "фуксия" => "#FF00FF",
+        "пудровый" => "#E6C7C2",
+        "красный" => "#FF0000",
+        "бордовый" => "#800000",
+        "вишневый" => "#911E42",
+        "синий" => "#0000FF",
+        "голубой" => "#87CEEB",
+        "темно-синий" => "#000080",
+        "морская волна" => "#008080",
+        "зеленый" => "#008000",
+        "изумрудный" => "#50C878",
+        "оливковый" => "#808000",
+        "хаки" => "#BDB76B",
+        "мятный" => "#98FF98",
+        "желтый" => "#FFFF00",
+        "лимонный" => "#FFF700",
+        "оранжевый" => "#FFA500",
+        "коралловый" => "#FF7F50",
+        "фиолетовый" => "#800080",
+        "лавандовый" => "#E6E6FA",
+        "сиреневый" => "#C8A2C8",
+        "коричневый" => "#A52A2A",
+        "шоколадный" => "#7B3F00",
+        "терракотовый" => "#E2725B",
+        _ => "#EEEEEE"
+    };
+}
+
+<style>
+    /* ФИКС ВЕРСТКИ СЛАЙДЕРА */
+    #detailsStrip {
+        display: flex !important;
+        transition: transform 0.5s ease;
+    }
+
+    .infographic-wrapper-container {
+        flex: 0 0 100%;
+        width: 100%;
+        position: relative;
+        display: block;
+        overflow: hidden;
+    }
+
+    /* Отключаем зум только для инфографики замеров */
+    #infoWrapper img {
+        width: 100%;
+        display: block;
+        transition: none !important;
+        transform: none !important;
+        pointer-events: none;
+    }
+
+    .infographic-wrapper-container img {
+        width: 100%;
+        display: block;
+    }
+</style>
+
+<div class="container product-page-wrapper">
+    <a href="/Home/Catalog" class="back-to-catalog">
+        <i class="fa-solid fa-arrow-left-long"></i> Вернуться в каталог
+    </a>
+
+    <div class="product-main-grid">
+        @* ГАЛЕРЕЯ *@
+        <div class="product-gallery">
+            <div class="slider-wrapper" id="zoomContainer" style="position: relative;">
+                @* КНОПКА ИЗБРАННОГО НА ГЛАВНОМ ФОТО *@
+                <button class="wishlist-heart @(isMainLiked ? "active" : "")"
+                        onclick="toggleLike(@Model.ProductID, this)"
+                        style="top: 20px; right: 20px; width: 50px; height: 50px; font-size: 1.4rem; z-index: 10; position: absolute;">
+                    <i class="@(isMainLiked ? "fa-solid" : "fa-regular") fa-heart"></i>
+                </button>
+
+                <div class="slider-container" id="detailsStrip">
+                    <img src="@Model.ImageURL" alt="@Model.Title">
+
+                    @if (!string.IsNullOrEmpty(Model.AdditionalImages))
+                    {
+                        var adds = Model.AdditionalImages.Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                                     .Select(s => s.Trim())
+                                     .Where(s => !string.IsNullOrWhiteSpace(s) && (s.StartsWith("http") || s.StartsWith("/"))).ToList();
+
+                        for (int i = 0; i < adds.Count; i++)
+                        {
+                            bool isLast = (i == adds.Count - 1);
+                            if (isLast)
+                            {
+                                @* СЛОЙ ДЛЯ ИНФОГРАФИКИ ЗАМЕРОВ (SVG И ПЛАШКИ) *@
+                                <div class="infographic-wrapper-container" id="infoWrapper">
+                                    <img src="@adds[i]" id="targetInfographicImg" alt="Инфографика замеров">
+                                    <svg id="infoSvgLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2;"></svg>
+                                    <div id="infoLabelsLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></div>
+                                </div>
+                            }
+                            else
+                            {
+                                <img src="@adds[i]" alt="@Model.Title">
+                            }
+                        }
+                    }
+                </div>
+
+                <div class="slider-nav">
+                    <button class="nav-btn" onclick="moveDetailsSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="nav-btn" onclick="moveDetailsSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <div class="thumbnail-grid">
+                <div class="thumb-item active" onclick="setDetailsSlide(0)">
+                    <img src="@Model.ImageURL">
+                </div>
+                @if (!string.IsNullOrEmpty(Model.AdditionalImages))
+                {
+                    var adds = Model.AdditionalImages.Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(s => s.Trim())
+                                 .Where(s => !string.IsNullOrWhiteSpace(s) && (s.StartsWith("http") || s.StartsWith("/")));
+                    var counter = 1;
+                    foreach (var img in adds)
+                    {
+                        <div class="thumb-item" onclick="setDetailsSlide(@counter)">
+                            <img src="@img">
+                        </div>
+                        counter++;
+                    }
+                }
+            </div>
+        </div>
+
+        @* ХАРАКТЕРИСТИКИ И КОНТЕНТ *@
+        <div class="product-info-sticky">
+            <h1 class="product-name">@Model.Title</h1>
+            <div class="price-tag">@Model.Price.ToString("N0") ₽</div>
+            <div class="specs-box">
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-fingerprint"></i><span class="spec-label-text">Артикул модели</span></div>
+                    <div class="spec-value">@Model.ArticleNumber</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-tag"></i><span class="spec-label-text">Категория</span></div>
+                    <div class="spec-value">@(Model.Category?.Name ?? "Базовая")</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-registered"></i><span class="spec-label-text">Бренд</span></div>
+                    <div class="spec-value">@(Model.Brand?.BrandName ?? "VESNA")</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-earth-europe"></i><span class="spec-label-text">Страна бренда</span></div>
+                    <div class="spec-value">@(Model.Brand?.BrandCountry ?? "Россия")</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-shirt"></i><span class="spec-label-text">Материал</span></div>
+                    <div class="spec-value">@Model.Material</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-calendar-check"></i><span class="spec-label-text">Сезон</span></div>
+                    <div class="spec-value">@Model.Season</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group">
+                        <div style="width: 14px; height: 14px; border-radius: 50%; background: @colorHex; border: 1px solid #eee; margin-left: 3px;"></div>
+                        <span class="spec-label-text" style="margin-left: 3px;">Цвет</span>
+                    </div>
+                    <div class="spec-value">@Model.Color</div>
+                </div>
+                <div class="spec-line">
+                    <div class="spec-label-group"><i class="fa-solid fa-ruler-combined"></i><span class="spec-label-text">Доступные размеры</span></div>
+                    <div class="spec-value">@Model.Sizes</div>
+                </div>
+            </div>
+            <button id="details-add-btn" class="btn-action-large" data-id="@Model.ProductID">Добавить в корзину</button>
+            <div class="description-block">@Model.Description</div>
+        </div>
+    </div>
+
+    @* БЛОК ОТЗЫВОВ *@
+    <section class="product-reviews-section" style="margin-top: 80px;">
+        <h2 class="title-main" style="font-weight: 800; text-transform: uppercase; margin-bottom: 40px; font-size: 2rem;">Отзывы покупателей</h2>
+        <div class="reviews-list" style="display: flex; flex-direction: column; gap: 20px;">
+            @if (Model.Reviews != null && Model.Reviews.Any(r => r.IsApproved))
+            {
+                foreach (var rev in Model.Reviews.Where(r => r.IsApproved).OrderByDescending(r => r.CreatedAt))
+                {
+                    <div class="review-card-glass" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.6); padding: 30px; border-radius: 25px;">
+                        <div class="rev-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div class="rev-user-info">
+                                <span class="rev-author" style="font-weight: 800; font-size: 1.1rem; color: #000; display: block; text-transform: uppercase;">@rev.UserName</span>
+                                <span class="rev-date" style="font-size: 0.75rem; color: #aaa; font-weight: 600;">@rev.CreatedAt.ToString("dd.MM.yyyy")</span>
+                            </div>
+                            <div class="rev-rating" style="color: #FFD700;">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <i class="@(i <= rev.Rating ? "fa-solid" : "fa-regular") fa-star"></i>
+                                }
+                            </div>
+                        </div>
+
+                        @* ИСПРАВЛЕНО: Обращаемся к новому свойству ReviewImageUrl *@
+                        @if (!string.IsNullOrEmpty(rev.ReviewImageUrl))
+                        {
+                            <div class="rev-image" style="margin-bottom: 15px;">
+                                <img src="@rev.ReviewImageUrl" alt="Фото отзыва" style="max-width: 150px; border-radius: 12px; border: 1px solid #eee;">
+                            </div>
+                        }
+
+                        <p class="rev-text" style="font-weight: 600; color: #333; line-height: 1.6; margin: 0;">@rev.Comment</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="glass-card" style="padding: 60px; text-align: center; background: rgba(255,255,255,0.3); border-radius: 25px; border: 1px solid #eee;">
+                    <p style="color: #888; font-weight: 800; text-transform: uppercase;">Отзывов пока нет.</p>
+                </div>
+            }
+        </div>
+    </section>
+
+    @* БЛОК РЕКОМЕНДАЦИЙ "ВАМ МОЖЕТ ПОНРАВИТЬСЯ" *@
+    @if (ViewBag.RelatedProducts != null)
+    {
+        <section class="related-section" style="margin-top: 100px;">
+            <h2 style="font-family: 'Playfair Display'; font-size: 2.5rem; text-align: center; font-weight: 500; margin-bottom: 40px;">Вам может понравиться</h2>
+
+            <div class="related-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 30px; justify-items: center;">
+                @foreach (var item in (IEnumerable<VesnaStore.Models.Product>)ViewBag.RelatedProducts)
+                {
+                    bool itemLiked = userFavs.Contains(item.ProductID);
+
+                    @* ПОВЕСИЛИ КЛИК НА САМУ КАРТОЧКУ (100% переход) *@
+                    <div class="product-card"
+                         style="position: relative; width: 100%; max-width: 250px; cursor: pointer; transition: transform 0.2s ease;"
+                         onclick="window.location.href='/Home/Details/@item.ProductID'">
+
+                        @* КНОПКА ЛАЙКА *@
+                        @* event.stopPropagation() не дает клику по сердцу вызвать клик по карточке *@
+                        <button class="wishlist-heart @(itemLiked ? "active" : "")"
+                                onclick="event.stopPropagation(); toggleLike(@item.ProductID, this);"
+                                style="position: absolute; top: 12px; right: 12px; z-index: 10; border: none; background: rgba(255,255,255,0.7); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            <i class="@(itemLiked ? "fa-solid" : "fa-regular") fa-heart" style="font-size: 1.2rem; color: #DCAEAE;"></i>
+                        </button>
+
+                        @* КОНТЕНТ *@
+                        <div class="related-img-box" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden;">
+                            <img src="@item.ImageURL" alt="@item.Title" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;">
+                        </div>
+                        <div style="text-align: center; padding-bottom: 10px;">
+                            <span style="font-size: 0.65rem; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px;">@(item.Category?.Name ?? "Base")</span>
+                            <h3 style="font-size: 1rem; font-weight: 400; margin: 5px 0; color: #333;">@item.Title</h3>
+                            <p style="font-weight: 700; font-size: 1.1rem; color: #DCAEAE;">@item.Price.ToString("N0") ₽</p>
+                        </div>
+
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const targetImg = document.getElementById('targetInfographicImg');
+        if (!targetImg) return;
+
+        function initInfographic() {
+            const realWidth = targetImg.naturalWidth || 800;
+            const realHeight = targetImg.naturalHeight || 600;
+            const svgLayer = document.getElementById('infoSvgLayer');
+            const labelsLayer = document.getElementById('infoLabelsLayer');
+
+            let svgHtml = '';
+            let labelsHtml = '';
+
+            const lines = [
+                { l: 'A', sx: @(Model.StartX_A ?? 0), sy: @(Model.StartY_A ?? 0), ex: @(Model.EndX_A ?? 0), ey: @(Model.EndY_A ?? 0), mx: @(Model.TextX_A ?? 0), my: @(Model.TextY_A ?? 0), val: "@Model.SizeValueA" },
+                { l: 'B', sx: @(Model.StartX_B ?? 0), sy: @(Model.StartY_B ?? 0), ex: @(Model.EndX_B ?? 0), ey: @(Model.EndY_B ?? 0), mx: @(Model.TextX_B ?? 0), my: @(Model.TextY_B ?? 0), val: "@Model.SizeValueB" },
+                { l: 'C', sx: @(Model.StartX_C ?? 0), sy: @(Model.StartY_C ?? 0), ex: @(Model.EndX_C ?? 0), ey: @(Model.EndY_C ?? 0), mx: @(Model.TextX_C ?? 0), my: @(Model.TextY_C ?? 0), val: "@Model.SizeValueC" }
+            ];
+
+            lines.forEach(line => {
+                if (line.sx === 0 && line.ex === 0) return;
+                const pSX = (line.sx / realWidth) * 100, pSY = (line.sy / realHeight) * 100;
+                const pEX = (line.ex / realWidth) * 100, pEY = (line.ey / realHeight) * 100;
+                const pMX = (line.mx / realWidth) * 100, pMY = (line.my / realHeight) * 100;
+
+                svgHtml += `<line x1="${pSX}%" y1="${pSY}%" x2="${pEX}%" y2="${pEY}%" stroke="#DCAEAE" stroke-width="5" stroke-linecap="round" />
+                                <circle cx="${pSX}%" cy="${pSY}%" r="5" fill="#111" /><circle cx="${pEX}%" cy="${pEY}%" r="5" fill="#111" />`;
+
+                labelsHtml += `<div style="position: absolute; top: ${pMY}%; left: ${pMX}%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); border: 1.5px solid #111; padding: 4px 10px; border-radius: 4px; font-family: 'Montserrat'; font-size: 14px; font-weight: bold; color: #111; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.15);">${line.l}: ${line.val || '—'} см</div>`;
+            });
+
+            svgLayer.innerHTML = svgHtml;
+            labelsLayer.innerHTML = labelsHtml;
+        }
+
+        if (targetImg.complete) initInfographic(); else targetImg.onload = initInfographic;
+    });
+</script>

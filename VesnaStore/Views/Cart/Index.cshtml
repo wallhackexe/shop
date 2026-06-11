@@ -1,0 +1,170 @@
+﻿@model IEnumerable<VesnaStore.Models.CartItem>
+@{
+    ViewData["Title"] = "Корзина";
+    Layout = "_Layout";
+    decimal initialTotal = Model?.Sum(m => m.Product.Price * m.Quantity) ?? 0;
+}
+
+<div class="container cart-page-wrapper">
+    @if (TempData["Error"] != null)
+    {
+        <div style="background: #fdf2f2; color: #DCAEAE; padding: 15px; border-radius: 12px; margin-bottom: 25px; text-align: center; font-weight: 600; border: 1px solid #f9e6e6;">
+            <i class="fa-solid fa-circle-exclamation"></i> @TempData["Error"]
+        </div>
+    }
+
+    <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 10px;">Ваша корзина</h1>
+    <p style="color: #888; margin-bottom: 40px;">Заполните данные для связи, чтобы мы могли подтвердить заказ</p>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div style="text-align:center; padding: 100px 0; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.02);">
+            <i class="fa-solid fa-bag-shopping" style="font-size: 5rem; color: #f0f0f0; margin-bottom: 30px;"></i>
+            <h2 style="font-family: 'Playfair Display';">Тут пока пусто...</h2>
+            <a href="/Home/Catalog" style="display: inline-block; padding: 15px 40px; background: #222; color: white; text-decoration: none; border-radius: 10px; margin-top: 20px;">В КАТАЛОГ</a>
+        </div>
+    }
+    else
+    {
+        <div class="cart-container">
+            <div class="cart-items">
+                @foreach (var item in Model)
+                {
+                    <div class="cart-item" data-id="@item.CartItemID" style="position: relative;">
+                        <img src="@item.Product.ImageURL" alt="@item.Product.Title" style="border-radius: 12px; width: 110px; height: 145px; object-fit: cover;">
+
+                        <div class="item-info">
+                            <div class="item-category" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">
+                                @(item.Product.Category?.Name ?? "ЭКСКЛЮЗИВ")
+                            </div>
+                            <h3>@item.Product.Title</h3>
+                            <div class="item-price" style="font-weight: 700; color: #DCAEAE; margin-bottom: 10px;">@item.Product.Price.ToString("N0") ₽</div>
+
+                            @* БЛОК КОЛИЧЕСТВА *@
+                            <div class="quantity-control" style="display: flex; align-items: center; gap: 15px;">
+                                <form asp-controller="Cart" asp-action="UpdateQuantity" method="post">
+                                    <input type="hidden" name="cartItemId" value="@item.CartItemID" />
+                                    <input type="hidden" name="delta" value="-1" />
+                                    <button type="submit" class="btn-q">-</button>
+                                </form>
+                                <span style="font-weight: 700; font-size: 1.1rem; min-width: 25px; text-align: center;">@item.Quantity</span>
+                                <form asp-controller="Cart" asp-action="UpdateQuantity" method="post">
+                                    <input type="hidden" name="cartItemId" value="@item.CartItemID" />
+                                    <input type="hidden" name="delta" value="1" />
+                                    <button type="submit" class="btn-q">+</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        @* КНОПКА УДАЛЕНИЯ *@
+                        <form asp-controller="Cart" asp-action="Remove" method="post" style="position:absolute; right:0; top:25px;">
+                            <input type="hidden" name="cartItemId" value="@item.CartItemID" />
+                            <button type="submit" style="background:none; border:none; color:#ddd; cursor:pointer; font-size: 1.4rem; transition: 0.3s;" onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#ddd'">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+
+            <div class="cart-summary">
+                <form asp-controller="Cart" asp-action="Checkout" method="post">
+                    @Html.AntiForgeryToken()
+                    <h3 style="font-family: 'Playfair Display'; font-size: 1.6rem; margin-bottom: 25px;">Оформление заказа</h3>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-size: 0.75rem; color: #aaa; letter-spacing: 1px; display: block; margin-bottom: 8px;">КОНТАКТЫ</label>
+                        <input type="tel" name="phone" placeholder="Номер телефона *" class="checkout-input" required>
+                        <input type="text" name="social" placeholder="Telegram или VK" class="checkout-input">
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <label style="font-size: 0.75rem; color: #aaa; letter-spacing: 1px; display: block; margin-bottom: 8px;">АДРЕС ДОСТАВКИ</label>
+                        <textarea name="address" placeholder="Город, улица, дом *" class="checkout-input" style="height: 100px; resize: none;" required></textarea>
+                    </div>
+
+                    <div class="total-price" style="display: flex; justify-content: space-between; font-size: 1.5rem; margin: 20px 0;">
+                        <span style="font-size: 1rem; color: #999; font-weight: 400;">Итого</span>
+                        <div>
+                            <span id="cartTotal" data-original="@initialTotal">@initialTotal.ToString("N0")</span> ₽
+                        </div>
+                    </div>
+
+                    @* БЛОК ПРОМОКОДА *@
+                    <div style="margin: 20px 0; padding: 15px; border-radius: 15px; background: #f9f9f9;">
+                        <label style="font-size: 0.7rem; color: #888; letter-spacing: 1px; display: block; margin-bottom: 10px;">ПРОМОКОД</label>
+
+                        <div id="promo-input-area" style="display: flex; gap: 10px;">
+                            <input type="text" id="promoCode" placeholder="Введите код" class="checkout-input" style="margin-bottom: 0;">
+                            <button type="button" onclick="applyPromo()" class="btn-black-sm" style="height: 45px; padding: 0 15px;">ОК</button>
+                        </div>
+
+                        <div id="promo-applied-area" style="display: none; align-items: center; justify-content: space-between; background: #e8f5e9; border: 1px solid #27ae60; padding: 10px 15px; border-radius: 12px; color: #2e7d32;">
+                            <div style="font-size: 0.8rem; font-weight: 700;">
+                                Скидка: <span id="discount-amount">0</span> ₽
+                            </div>
+                            <button type="button" onclick="cancelPromo()" style="background:none; border:none; cursor:pointer; font-weight:700; color:#2e7d32; font-size:1.2rem;">&times;</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
+                        <input type="checkbox" id="checkoutConsent" name="checkoutConsent" required style="margin-top: 3px;" />
+                        <label for="checkoutConsent" style="font-size: 0.75rem; color: #888; line-height: 1.4; cursor: pointer;">
+                            Я соглашаюсь на обработку персональных данных (<a href="/Home/Privacy" target="_blank" style="color: #DCAEAE;">Политика</a>)
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-checkout">ПОДТВЕРДИТЬ ЗАКАЗ</button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    let originalTotal = parseFloat(document.getElementById('cartTotal').getAttribute('data-original'));
+
+    async function applyPromo() {
+        const code = document.getElementById('promoCode').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        if (!code) {
+            Swal.fire({ icon: 'warning', title: 'Введите промокод' });
+            return;
+        }
+
+        try {
+            const response = await fetch('/Cart/ApplyPromo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ Code: code, CurrentTotal: originalTotal })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // UI состояние
+                document.getElementById('promo-input-area').style.display = 'none';
+                document.getElementById('promo-applied-area').style.display = 'flex';
+                document.getElementById('discount-amount').innerText = data.discount.toLocaleString('ru-RU');
+
+                // Пересчет суммы
+                const newTotal = originalTotal - data.discount;
+                document.getElementById('cartTotal').innerText = newTotal.toLocaleString('ru-RU');
+
+                Swal.fire({ icon: 'success', title: 'Скидка применена!', text: `Ваша выгода: ${data.discount} ₽`, timer: 2000 });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Ошибка', text: data.message });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Ошибка', text: 'Сервер недоступен' });
+        }
+    }
+
+    function cancelPromo() {
+        document.getElementById('cartTotal').innerText = originalTotal.toLocaleString('ru-RU');
+        document.getElementById('promo-input-area').style.display = 'flex';
+        document.getElementById('promo-applied-area').style.display = 'none';
+        document.getElementById('promoCode').value = '';
+    }
+</script>

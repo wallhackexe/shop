@@ -1,0 +1,33 @@
+﻿@model IEnumerable<VesnaStore.Models.Category>
+@{
+    ViewData["Title"] = "Категории";
+    Layout = "_AdminLayout";
+}
+
+
+<div class="cat-container">
+    <h1 class="page-title">Управление категориями</h1>
+
+    <div class="add-cat-card">
+        <form asp-action="AddCategory" method="post" class="input-group">
+            @Html.AntiForgeryToken()
+            <input type="text" name="name" placeholder="Новая категория..." class="admin-input" required />
+            <button type="submit" class="btn-submit">ДОБАВИТЬ</button>
+        </form>
+    </div>
+
+    <div class="category-list">
+        @foreach (var cat in Model)
+        {
+            <div class="category-card">
+                <span class="cat-name">@cat.Name</span>
+                <form asp-action="DeleteCategory" asp-route-id="@cat.CategoryID" method="post" onsubmit="return confirm('Удалить эту категорию?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-delete">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+</div>

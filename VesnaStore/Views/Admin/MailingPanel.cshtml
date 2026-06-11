@@ -1,0 +1,39 @@
+﻿@{
+    ViewData["Title"] = "Рассылка уведомлений";
+    Layout = "_AdminLayout";
+}
+
+<main class="admin-main">
+    <div style="max-width: 700px; margin: 0 auto;">
+        <div class="page-header">
+            <h1>Управление рассылками</h1>
+            <p style="color: #999; font-size: 0.9rem; margin-top: 5px;">Создание личных уведомлений для клиентов VESNA</p>
+        </div>
+
+        <form action="/Admin/SendMailing" method="post" class="add-cat-card" style="padding: 30px;">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Заголовок уведомления</label>
+                <input type="text" name="title" class="admin-input" placeholder="Например: Ваш личный промокод VESNA15" required />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Текст сообщения / Условия</label>
+                <textarea name="message" class="admin-input" style="height: 140px; resize: none;" placeholder="Введите текст сообщения..." required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Целевая аудитория</label>
+                <select name="targetAudience" class="admin-select">
+                    <option value="all">Отправить всем пользователям сайта</option>
+                    <option value="active_6months">Активные клиенты (покупки за последние 6 месяцев)</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-submit" style="width: 100%; padding: 16px; border-radius: 12px; font-size: 0.9rem; cursor: pointer;">
+                Запустить рассылку в профили
+            </button>
+        </form>
+    </div>
+</main>

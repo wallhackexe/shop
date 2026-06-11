@@ -1,0 +1,118 @@
+﻿@model IEnumerable<VesnaStore.Models.Product>
+@{
+    ViewData["Title"] = "Складской учет";
+    Layout = "_AdminLayout";
+}
+
+<div class="inventory-wrapper">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h1 style="margin: 0;">Складской учет</h1>
+        <a href="/Admin/Create" style="text-decoration: none; background: #111; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">+ НОВЫЙ ТОВАР</a>
+    </div>
+
+    <div class="analytics-row">
+        <div class="analytic-card">
+            <span>На витрине</span>
+            <p>@Model.Count(p => p.IsPublished)</p>
+        </div>
+        <div class="analytic-card">
+            <span>Новинки</span>
+            <p style="color: #f1c40f;">@Model.Count(p => p.IsNew)</p>
+        </div>
+        <div class="analytic-card">
+            <span>В архиве</span>
+            <p>@Model.Count(p => !p.IsPublished)</p>
+        </div>
+        <div class="analytic-card">
+            <span>Оценка склада</span>
+            <p>@ViewBag.TotalStockValue.ToString("N0") ₽</p>
+        </div>
+        <div class="analytic-card">
+            <span>Всего штук</span>
+            <p>@ViewBag.TotalItems</p>
+        </div>
+    </div>
+
+    <form method="get" action="/Admin/Inventory" class="filter-panel">
+        <input type="text" name="search" placeholder="Артикул или название..." class="admin-input" value="@Context.Request.Query["search"]" />
+        <select name="categoryId" class="admin-select">
+            <option value="">Все категории</option>
+            @foreach (var cat in (IEnumerable<VesnaStore.Models.Category>)ViewBag.Categories)
+            {
+                <option value="@cat.CategoryID" selected="@(Context.Request.Query["categoryId"] == cat.CategoryID.ToString())">@cat.Name</option>
+            }
+        </select>
+        <select name="status" class="admin-select">
+            <option value="">Все наличие</option>
+            <option value="none">Нет на складе</option>
+            <option value="low">Мало</option>
+        </select>
+        <button type="submit" class="admin-input" style="background: #111; color: white; border: none; cursor: pointer;">ОК</button>
+    </form>
+
+    <div class="inventory-card">
+        <table class="admin-table">
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td style="width: 300px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <img src="@item.ImageURL" style="width: 45px; height: 60px; object-fit: cover; border-radius: 8px;" />
+                                <div>
+                                    <div style="font-size: 0.9rem; font-weight: 700; color: #111;">@item.Title</div>
+                                    <div style="font-size: 0.7rem; color: #999;">@item.ArticleNumber</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div style="display: flex; gap: 10px;">
+                                <!-- ТУМБЛЕР ПУБЛИКАЦИИ -->
+                                <form asp-action="TogglePublish" method="post">
+                                    <input type="hidden" name="productId" value="@item.ProductID" />
+                                    <button type="submit" class="btn-publish @(item.IsPublished ? "status-online" : "status-offline")" title="Видимость в каталоге">
+                                        <i class="fa-solid @(item.IsPublished ? "fa-eye" : "fa-eye-slash")"></i>
+                                        <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">@(item.IsPublished ? "На сайте" : "Скрыт")</span>
+                                    </button>
+                                </form>
+
+                                <!-- ТУМБЛЕР НОВИНКИ -->
+                                <form asp-action="ToggleNew" method="post">
+                                    <input type="hidden" name="productId" value="@item.ProductID" />
+                                    <button type="submit" class="btn-publish @(item.IsNew ? "status-star-active" : "status-offline")" title="Отображение на главной">
+                                        <i class="fa-solid fa-star"></i>
+                                        <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">@(item.IsNew ? "Новинка" : "Обычный")</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="stock-control">
+                                <form asp-action="AdjustStock" method="post" style="display:inline;">
+                                    <input type="hidden" name="productId" value="@item.ProductID" />
+                                    <input type="hidden" name="adjustment" value="-1" />
+                                    <button type="submit" class="btn-step">-</button>
+                                </form>
+                                <form asp-action="UpdateStock" method="post" style="display:inline;">
+                                    <input type="hidden" name="productId" value="@item.ProductID" />
+                                    <input type="number" name="stockQuantity" value="@item.StockQuantity" class="input-mini" onchange="this.form.submit()" />
+                                </form>
+                                <form asp-action="AdjustStock" method="post" style="display:inline;">
+                                    <input type="hidden" name="productId" value="@item.ProductID" />
+                                    <input type="hidden" name="adjustment" value="1" />
+                                    <button type="submit" class="btn-step">+</button>
+                                </form>
+                            </div>
+                        </td>
+
+                        <td style="text-align: right;">
+                            <a href="/Admin/Edit/@item.ProductID" style="color: #111; font-size: 1.2rem;"><i class="fa-regular fa-pen-to-square"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

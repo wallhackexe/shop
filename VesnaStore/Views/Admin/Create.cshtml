@@ -1,0 +1,460 @@
+﻿@model VesnaStore.Models.Product
+@{
+    ViewData["Title"] = "Добавить товар";
+    Layout = "_AdminLayout";
+}
+
+<style>
+    /* Локальные стили только для интерактивного холста */
+    .canvas-responsive-box {
+        width: 100%;
+        overflow-x: auto;
+        text-align: center;
+        background: #222;
+        padding: 15px;
+        border-radius: 20px;
+        box-sizing: border-box;
+        margin-top: 15px;
+    }
+
+    #sizeProductImage {
+        width: 100% !important; /* Принудительно растягиваем на весь контейнер */
+        height: auto !important;
+        display: block;
+    }
+    /* Фикс для полей замеров на мобилке */
+    @@media (max-width: 768px) {
+        .size-inputs-mobile-fix {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+        }
+    }
+</style>
+
+<div class="form-container-limited">
+    <div class="page-header">
+        <h1>Новая модель</h1>
+        <p style="color: #999; font-size: 0.9rem; margin-top: 5px;">Заполните данные для создания карточки товара</p>
+    </div>
+
+    <div class="admin-tabs">
+        <button type="button" class="tab-btn active" onclick="openTab(event, 'tab-main')">ОСНОВНОЕ</button>
+        <button type="button" class="tab-btn" onclick="openTab(event, 'tab-gallery')">ГАЛЕРЕЯ</button>
+        <button type="button" class="tab-btn" onclick="openTab(event, 'tab-stock')">СКЛАД</button>
+        <button type="button" class="tab-btn" onclick="openTab(event, 'tab-size')">РАЗМЕРЫ</button>
+    </div>
+
+    <form asp-action="Create" method="post" id="admin-create-form">
+
+        <!-- ВКЛАДКА: ОСНОВНОЕ -->
+        <div id="tab-main" class="tab-content active">
+            <div class="form-card">
+                <div class="inner-grid">
+                    <div class="form-group">
+                        <label>Артикул</label>
+                        <input asp-for="ArticleNumber" class="admin-input" placeholder="Напр: VSN-2026" type="text" />
+                    </div>
+                    <div class="form-group">
+                        <label>Название</label>
+                        <input asp-for="Title" class="admin-input" placeholder="Шелковое платье" required type="text" />
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Описание</label>
+                    <textarea asp-for="Description" class="admin-textarea" rows="4" placeholder="Опишите фасон..."></textarea>
+                </div>
+
+                <div class="inner-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select asp-for="CategoryID" id="main-category-select" class="admin-select" required>
+                            <option value="">-- Выбрать --</option>
+                            <option value="1">Платья</option>
+                            <option value="2">Блузки</option>
+                            <option value="3">Юбки</option>
+                            <option value="4">Футболки</option>
+                            <option value="5">Рубашки</option>
+                            <option value="6">Брюки</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Цена (₽)</label>
+                        <input asp-for="Price" type="number" step="0.01" class="admin-input" required value="0" />
+                    </div>
+                </div>
+
+                <div class="inner-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Бренд</label>
+                        <input name="brandName" class="admin-input" list="brandList" placeholder="Введите название..." />
+                        <datalist id="brandList">
+                            <option value="ВЕСНА">Россия</option>
+                            <option value="Nike">США</option>
+                            <option value="Zara">Испания</option>
+                            <option value="ТВОЕ">Россия</option>
+                            <option value="Глория Джинс">Россия</option>
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Страна бренда</label>
+                        <input name="brandCountry" class="admin-input" placeholder="Россия" />
+                    </div>
+                </div>
+
+                <div class="inner-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Материал</label>
+                        <input asp-for="Material" class="admin-input" placeholder="Шелк 100%" type="text" />
+                    </div>
+                    <div class="form-group">
+                        <label>Сезон</label>
+                        <input asp-for="Season" class="admin-input" placeholder="Лето 2026" type="text" />
+                    </div>
+                </div>
+
+                <div class="inner-grid" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Цвет</label>
+                        <input asp-for="Color" class="admin-input" placeholder="Черный" type="text" />
+                    </div>
+                    <div class="form-group">
+                        <label>Размеры (через запятую)</label>
+                        <input asp-for="Sizes" class="admin-input" placeholder="S, M, L" type="text" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА: ГАЛЕРЕЯ -->
+        <div id="tab-gallery" class="tab-content">
+            <div class="form-card">
+                <div id="previewBlock" style="width: 100%; height: 300px; background: #fafafa; border: 2px dashed #eee; border-radius: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <i class="fa-regular fa-image" style="font-size: 3rem; color: #ddd;"></i>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px; padding: 20px; background: #fdf2f2; border-radius: 15px; border: 1px dashed #DCAEAE; text-align: center;">
+                    <label style="color: #222; margin-bottom: 15px; display: block; font-weight: 700;">Загрузить фото</label>
+                    <input type="file" id="cloudUploader" accept="image/*" style="font-size: 0.8rem; width: 100%;" />
+                    <div id="uploadStatus" style="margin-top: 10px; font-weight: 600; font-size: 0.8rem; color: #888;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Ссылка на главное фото</label>
+                    <input asp-for="ImageURL" id="imgInput" class="admin-input" placeholder="https://..." required type="text" />
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Галерея (ссылки с новой строки)</label>
+                    <textarea name="AdditionalImages" class="admin-textarea" rows="4" id="AdditionalImages"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА: СКЛАД -->
+        <div id="tab-stock" class="tab-content">
+            <div class="form-card">
+                <div class="form-group">
+                    <label>Остаток на складе</label>
+                    <input asp-for="StockQuantity" type="number" class="admin-input" value="0" required />
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА: РАЗМЕРЫ (ИНТЕРАКТИВНАЯ РАЗМЕТКА) -->
+        <div id="tab-size" class="tab-content">
+            <div class="form-card" style="font-family: 'Montserrat', sans-serif;">
+                <div style="margin-bottom: 20px; border-bottom: 1px solid #f9f9f9; padding-bottom: 15px;">
+                    <h3 style="font-weight: 800; text-transform: uppercase; font-size: 1.1rem; margin: 0 0 5px; letter-spacing: 0.5px;">
+                        Разметка по фотографии товара
+                    </h3>
+                    <p style="font-size: 0.75rem; color: #999; margin: 0; font-weight: 600; text-transform: uppercase;">
+                        Чертите стрелки прямо по фото. На мобилках просто ведите пальцем!
+                    </p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="inner-grid size-inputs-mobile-fix">
+                        <div class="form-group">
+                            <label>Значение A (см)</label>
+                            <input type="text" id="input-size-a" name="SizeValueA" placeholder="Напр: 105" class="admin-input" />
+                        </div>
+                        <div class="form-group">
+                            <label>Значение B (см)</label>
+                            <input type="text" id="input-size-b" name="SizeValueB" placeholder="Напр: 42" class="admin-input" />
+                        </div>
+                        <div class="form-group">
+                            <label>Значение C (см)</label>
+                            <input type="text" id="input-size-c" name="SizeValueC" placeholder="Напр: 50" class="admin-input" />
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content: space-between; align-items:center; background:#f4f7f6; padding:12px 20px; border-radius:12px; gap: 10px;">
+                        <span id="drawing-step-status" style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color:#111; line-height: 1.2;">
+                            Шаг: Начертите стрелку <b id="current-step-letter" style="color:#DCAEAE; font-size:0.8rem;">A</b>
+                        </span>
+                        <button type="button" id="btn-reset-canvas" class="btn-submit" style="padding: 8px 18px; font-size:0.75rem; font-weight:700; text-transform:uppercase; border-radius:8px; margin:0; width:auto;" onclick="resetDrawing()">Сбросить</button>
+                    </div>
+
+                    <!-- Скрытые поля для координат (Замеры группы A) -->
+                    <input type="hidden" name="StartX_A" id="hdn-sx-a" />
+                    <input type="hidden" name="StartY_A" id="hdn-sy-a" />
+                    <input type="hidden" name="EndX_A" id="hdn-ex-a" />
+                    <input type="hidden" name="EndY_A" id="hdn-ey-a" />
+                    <input type="hidden" name="TextX_A" id="hdn-x-a" />
+                    <input type="hidden" name="TextY_A" id="hdn-y-a" />
+
+                    <!-- Скрытые поля для координат (Замеры группы B) -->
+                    <input type="hidden" name="StartX_B" id="hdn-sx-b" />
+                    <input type="hidden" name="StartY_B" id="hdn-sy-b" />
+                    <input type="hidden" name="EndX_B" id="hdn-ex-b" />
+                    <input type="hidden" name="EndY_B" id="hdn-ey-b" />
+                    <input type="hidden" name="TextX_B" id="hdn-x-b" />
+                    <input type="hidden" name="TextY_B" id="hdn-y-b" />
+
+                    <!-- Скрытые поля для координат (Замеры группы C) -->
+                    <input type="hidden" name="StartX_C" id="hdn-sx-c" />
+                    <input type="hidden" name="StartY_C" id="hdn-sy-c" />
+                    <input type="hidden" name="EndX_C" id="hdn-ex-c" />
+                    <input type="hidden" name="EndY_C" id="hdn-ey-c" />
+                    <input type="hidden" name="TextX_C" id="hdn-x-c" />
+                    <input type="hidden" name="TextY_C" id="hdn-y-c" />
+
+                    <!-- Интерактивный холст разметки -->
+                    <div class="canvas-responsive-box" style="position: relative; display: inline-block; max-width: 100%;">
+                        <img id="sizeProductImage" style="display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-select: none;" />
+                        <svg id="sizeSvgLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
+                        <div id="svgLabelsContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+                        <div id="svgDrawOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit" style="width: 100%; padding: 20px; border-radius: 15px; font-weight: 700; font-size: 1rem; margin-top: 20px; letter-spacing: 1px; text-transform: uppercase;">СОЗДАТЬ ТОВАР</button>
+
+        <div style="text-align: center; margin-top: 25px; margin-bottom: 40px;">
+            <a href="/Admin/Index" style="color: #999; text-decoration: none; font-size: 0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Отменить и вернуться</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const svgOverlay = document.getElementById('svgDrawOverlay');
+    const svgLayer = document.getElementById('sizeSvgLayer');
+    const labelsContainer = document.getElementById('svgLabelsContainer');
+    const sizeImg = document.getElementById('sizeProductImage');
+
+    let isDrawing = false;
+    let startX = 0, startY = 0;
+    let currentStep = 0;
+    let drawnLines = [];
+
+    // При переключении на вкладку "Размеры" загружаем превью по URL
+    document.querySelectorAll('.admin-tabs button').forEach(btn => {
+        btn.addEventListener('click', function () {
+            if (this.innerText.includes('РАЗМЕРЫ')) {
+                const imgUrl = document.getElementById('imgInput').value.trim();
+                if (imgUrl) {
+                    sizeImg.src = imgUrl;
+                    setTimeout(() => {
+                        redrawSvg();
+                    }, 200);
+                } else {
+                    sizeImg.removeAttribute('src');
+                    svgLayer.innerHTML = '';
+                    labelsContainer.innerHTML = '';
+                    drawnLines = [];
+                    currentStep = 0;
+                    document.getElementById('drawing-step-status').innerHTML = '<span style="color:red;">Сначала загрузите главное фото товара на вкладке "ГАЛЕРЕЯ"!</span>';
+                }
+            }
+        });
+    });
+
+    // Расчет процентных координат мыши или тач-события на холсте
+    function getPercentCoords(e) {
+        const rect = svgOverlay.getBoundingClientRect();
+
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        return {
+            x: ((clientX - rect.left) / rect.width) * 100,
+            y: ((clientY - rect.top) / rect.height) * 100
+        };
+    }
+
+    svgOverlay.addEventListener('mousedown', startDrawing);
+    svgOverlay.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); }, { passive: false });
+
+    function startDrawing(e) {
+        if (currentStep > 2 || !sizeImg.src) return;
+        isDrawing = true;
+        const coords = getPercentCoords(e);
+        startX = coords.x;
+        startY = coords.y;
+    }
+
+    svgOverlay.addEventListener('mousemove', moveDrawing);
+    svgOverlay.addEventListener('touchmove', (e) => { e.preventDefault(); moveDrawing(e); }, { passive: false });
+
+    function moveDrawing(e) {
+        if (!isDrawing) return;
+        const coords = getPercentCoords(e);
+        let currentX = coords.x;
+        let currentY = coords.y;
+
+        // Выравнивание линий строго по горизонтали или вертикали
+        if (Math.abs(currentX - startX) > Math.abs(currentY - startY)) currentY = startY;
+        else currentX = startX;
+
+        redrawSvg();
+
+        const tempLine = `<line x1="${startX}%" y1="${startY}%" x2="${currentX}%" y2="${currentY}%" stroke="#DCAEAE" stroke-width="4" stroke-dasharray="6,6" />`;
+        svgLayer.insertAdjacentHTML('beforeend', tempLine);
+    }
+
+    svgOverlay.addEventListener('mouseup', endDrawing);
+    svgOverlay.addEventListener('touchend', endDrawing);
+    svgOverlay.addEventListener('mouseleave', () => { if (isDrawing) isDrawing = false; redrawSvg(); });
+
+    function endDrawing(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+
+        const coords = getPercentCoords(e);
+        let currentX = coords.x;
+        let currentY = coords.y;
+
+        if (Math.abs(currentX - startX) > Math.abs(currentY - startY)) currentY = startY;
+        else currentX = startX;
+
+        // Игнорируем случайные микро-клики
+        if (Math.abs(currentX - startX) < 1.5 && Math.abs(currentY - startY) < 1.5) {
+            redrawSvg();
+            return;
+        }
+
+        const midX = (startX + currentX) / 2;
+        const midY = (startY + currentY) / 2;
+
+        const letters = ['A', 'B', 'C'];
+        const currentLetter = letters[currentStep];
+
+        drawnLines.push({ sX: startX, sY: startY, eX: currentX, eY: currentY, mX: midX, mY: midY, letter: currentLetter });
+
+        // Пересчет относительных процентов в абсолютные пиксели картинки для бэкенда
+        const realWidth = sizeImg.naturalWidth || 800;
+        const realHeight = sizeImg.naturalHeight || 600;
+        const lowerL = currentLetter.toLowerCase();
+
+        document.getElementById(`hdn-sx-${lowerL}`).value = Math.round((startX / 100) * realWidth);
+        document.getElementById(`hdn-sy-${lowerL}`).value = Math.round((startY / 100) * realHeight);
+        document.getElementById(`hdn-ex-${lowerL}`).value = Math.round((currentX / 100) * realWidth);
+        document.getElementById(`hdn-ey-${lowerL}`).value = Math.round((currentY / 100) * realHeight);
+        document.getElementById(`hdn-x-${lowerL}`).value = Math.round((midX / 100) * realWidth);
+        document.getElementById(`hdn-y-${lowerL}`).value = Math.round((midY / 100) * realHeight);
+
+        currentStep++;
+        updateStepUI();
+        redrawSvg();
+    }
+
+    function redrawSvg() {
+        svgLayer.innerHTML = '';
+        labelsContainer.innerHTML = '';
+
+        drawnLines.forEach(line => {
+            // Линии всегда в процентах, это правильно
+            const svgLine = `<line x1="${line.sX}%" y1="${line.sY}%" x2="${line.eX}%" y2="${line.eY}%" stroke="#DCAEAE" stroke-width="5" stroke-linecap="round" />`;
+            svgLayer.insertAdjacentHTML('beforeend', svgLine);
+
+            // Чтобы подписи не прыгали, используем transform: translate(-50%, -50%)
+            // И убедись, что они привязаны к процентам (line.mX и line.mY у тебя уже в процентах)
+            const text = `${line.letter}: ${document.getElementById('input-size-' + line.letter.toLowerCase()).value || '—'} см`;
+
+            labelsContainer.insertAdjacentHTML('beforeend', `
+                    <div style="position: absolute; top: ${line.mY}%; left: ${line.mX}%;
+                                transform: translate(-50%, -50%); pointer-events: none;
+                                background: rgba(255,255,255,0.9); border: 1px solid #111; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        ${text}
+                    </div>`);
+        });
+    }
+
+    ['input-size-a', 'input-size-b', 'input-size-c'].forEach(id => {
+        document.getElementById(id).addEventListener('input', redrawSvg);
+    });
+
+    function updateStepUI() {
+        const letters = ['A', 'B', 'C'];
+        if (currentStep <= 2) {
+            document.getElementById('current-step-letter').innerText = letters[currentStep];
+        } else {
+            document.getElementById('drawing-step-status').innerHTML = '✨ <b style="color:#27ae60;">Разметка готова!</b>';
+        }
+    }
+
+    function resetDrawing() {
+        currentStep = 0;
+        drawnLines = [];
+        ['a', 'b', 'c'].forEach(l => {
+            document.getElementById(`hdn-sx-${l}`).value = "";
+            document.getElementById(`hdn-sy-${l}`).value = "";
+            document.getElementById(`hdn-ex-${l}`).value = "";
+            document.getElementById(`hdn-ey-${l}`).value = "";
+            document.getElementById(`hdn-x-${l}`).value = "";
+            document.getElementById(`hdn-y-${l}`).value = "";
+        });
+        document.getElementById('drawing-step-status').innerHTML = 'Шаг: Начертите стрелку <b id="current-step-letter" style="color:#DCAEAE; font-size:0.8rem;">A</b>';
+        redrawSvg();
+    }
+
+    // Дублирующий предохранитель при отправке формы для точной записи размеров
+    document.getElementById('admin-create-form').addEventListener('submit', function (e) {
+        const realWidth = sizeImg.naturalWidth || 800;
+        const realHeight = sizeImg.naturalHeight || 600;
+
+        drawnLines.forEach(line => {
+            const lowerL = line.letter.toLowerCase();
+            document.getElementById(`hdn-sx-${lowerL}`).value = Math.round((line.sX / 100) * realWidth);
+            document.getElementById(`hdn-sy-${lowerL}`).value = Math.round((line.sY / 100) * realHeight);
+            document.getElementById(`hdn-ex-${lowerL}`).value = Math.round((line.eX / 100) * realWidth);
+            document.getElementById(`hdn-ey-${lowerL}`).value = Math.round((line.eY / 100) * realHeight);
+            document.getElementById(`hdn-x-${lowerL}`).value = Math.round((line.mX / 100) * realWidth);
+            document.getElementById(`hdn-y-${lowerL}`).value = Math.round((line.mY / 100) * realHeight);
+        });
+    });
+
+    // Логика работы табов
+    window.openTab = function (evt, tabId) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabId).style.display = "block";
+        evt.currentTarget.classList.add("active");
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const contents = document.getElementsByClassName("tab-content");
+        for (let i = 1; i < contents.length; i++) {
+            contents[i].style.display = "none";
+        }
+    });
+</script>

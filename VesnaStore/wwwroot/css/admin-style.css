@@ -1,0 +1,950 @@
+﻿/* ==================================================
+   АДМИН-ПАНЕЛЬ: ГЛОБАЛЬНЫЕ СТИЛИ И КАРКАС
+   ================================================== */
+
+:root {
+    --admin-bg: #f4f7f6;
+    --admin-sidebar: #111;
+    --admin-accent: #DCAEAE;
+}
+
+body {
+    margin: 0;
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--admin-bg);
+    display: flex;
+    min-height: 100vh;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================================================
+   КАРКАС: САЙДБАР, ШАПКА, ОВЕРЛЕЙ
+   ================================================== */
+
+.admin-sidebar {
+    width: 260px;
+    background: var(--admin-sidebar);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1001;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-header {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #fff;
+    z-index: 1000;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.burger-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #111;
+}
+
+.admin-logo {
+    padding: 30px 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: block;
+    color: white;
+    text-decoration: none;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    color: #aaa;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+    .admin-nav-link:hover, .admin-nav-link.active {
+        background: #222;
+        color: #fff;
+    }
+
+    .admin-nav-link i {
+        color: var(--admin-accent);
+        width: 20px;
+        text-align: center;
+    }
+
+.admin-main {
+    flex-grow: 1;
+    margin-left: 260px;
+    padding: 40px;
+    width: calc(100% - 260px);
+    min-width: 0; /* КРИТИЧЕСКИЙ ФИКС: не дает холсту Canvas раздувать и ломать ширину контента */
+    box-sizing: border-box;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+/* ==================================================
+   БАЗОВЫЕ ЭЛЕМЕНТЫ КОНТЕНТА
+   ================================================== */
+
+/* КОНТЕЙНЕРЫ */
+.cat-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-container-limited {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.inventory-wrapper, .media-container, .orders-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ЗАГОЛОВКИ */
+.page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: #111;
+}
+
+.page-header {
+    margin-bottom: 30px;
+}
+
+    .page-header h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0;
+        color: #111;
+    }
+
+.table-header {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+@media (min-width: 768px) {
+    .table-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+.header-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+}
+
+/* КАРТОЧКИ */
+.add-cat-card, .form-card, .stat-card, .analytic-card, .content-card, .inventory-card, .orders-card, .upload-zone {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+}
+
+.add-cat-card {
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.form-card {
+    padding: 25px;
+}
+
+.content-card, .inventory-card, .orders-card {
+    overflow: hidden;
+}
+
+/* ПОЛЯ ВВОДА */
+.admin-input, .admin-select, .admin-textarea, .track-input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    background: #fafafa;
+    font-family: inherit;
+    font-size: 16px;
+    transition: 0.3s;
+    box-sizing: border-box;
+    outline: none;
+}
+
+    .admin-input:focus, .admin-select:focus, .admin-textarea:focus, .track-input:focus {
+        border-color: #DCAEAE;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(220, 174, 174, 0.1);
+    }
+
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* КНОПКИ */
+.btn-submit {
+    background: #111;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); /* Плавный переход */
+    border-radius: 12px;
+}
+
+    /* ДОБАВЛЯЕМ ВОТ ЭТОТ КУСОК: */
+    .btn-submit:hover {
+        background: var(--admin-accent); /* При наведении становится розовой #DCAEAE */
+        transform: translateY(-2px); /* Слегка приподнимается */
+        box-shadow: 0 5px 15px rgba(220, 174, 174, 0.3); /* Мягкая розовая тень */
+    }
+
+    .btn-submit:active {
+        transform: scale(0.98) translateY(0);
+    }
+
+.add-cat-card .btn-submit {
+    padding: 0 25px;
+}
+
+.form-card .btn-submit {
+    width: 100%;
+    padding: 20px;
+    border-radius: 15px;
+    font-weight: 700;
+    margin-top: 20px;
+    font-size: 1rem;
+}
+
+.btn-add {
+    text-decoration: none;
+    padding: 14px 15px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.3s;
+    background: #111;
+    color: white;
+    white-space: nowrap;
+}
+
+.btn-secondary {
+    background: #fff;
+    color: #111;
+    border: 1px solid #eee;
+}
+
+.btn-delete {
+    background: #fff0f0;
+    color: #ff4d4d;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .btn-delete:hover {
+        background: #ff4d4d;
+        color: white;
+    }
+
+/* ТАБЛИЦЫ */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .admin-table thead th {
+        text-align: left;
+        padding: 20px 25px;
+        background: #fafafa;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: #999;
+        letter-spacing: 1px;
+    }
+
+    .admin-table tbody td, .admin-table td {
+        padding: 20px 25px;
+        border-bottom: 1px solid #f4f7f6;
+        vertical-align: middle;
+    }
+
+/* ==================================================
+   СПЕЦИФИЧНЫЕ МОДУЛИ
+   ================================================== */
+
+/* Категории */
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+    .input-group .admin-input {
+        flex-grow: 1;
+    }
+
+.category-card {
+    background: white;
+    padding: 18px 25px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    border: 1px solid transparent;
+    transition: 0.3s;
+}
+
+    .category-card:hover {
+        border-color: #DCAEAE;
+    }
+
+.cat-name {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Добавление товара */
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.inner-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+@media (min-width: 600px) {
+    .inner-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #aaa;
+    border-bottom: 3px solid transparent;
+    transition: 0.3s;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+    .tab-btn.active {
+        color: #111;
+        border-bottom-color: #DCAEAE;
+    }
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+    .tab-content.active {
+        display: block;
+    }
+
+/* Статистика и Фильтры */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+@media (min-width: 992px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 25px;
+    }
+}
+
+.stat-card {
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: 0.3s;
+    border: 1px solid transparent;
+}
+
+    .stat-card:active {
+        transform: scale(0.95);
+    }
+
+.stat-icon {
+    width: 45px;
+    height: 45px;
+    background: #fafafa;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #111;
+    margin-bottom: 12px;
+}
+
+.stat-info h4 {
+    margin: 0;
+    font-size: 0.65rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.stat-info p {
+    margin: 5px 0 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #111;
+}
+
+.analytics-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+@media (min-width: 992px) {
+    .analytics-row {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+.analytic-card {
+    padding: 20px;
+    border: 1px solid #f4f7f6;
+}
+
+    .analytic-card span {
+        font-size: 0.7rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .analytic-card p {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111;
+    }
+
+.filter-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+@media (min-width: 992px) {
+    .filter-panel {
+        grid-template-columns: 2fr 1fr 1fr 100px;
+    }
+}
+
+/* Элементы таблиц */
+.product-img {
+    width: 60px;
+    height: 75px;
+    border-radius: 10px;
+}
+
+.badge-cat {
+    background: #f4f7f6;
+    color: #666;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.action-icons {
+    display: flex;
+    gap: 20px;
+    font-size: 1.2rem;
+}
+
+.btn-publish {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: 0.3s;
+    padding: 8px 12px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+.status-online {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.08);
+}
+
+.status-star-active {
+    color: #f1c40f;
+    background: rgba(241, 196, 15, 0.08);
+}
+
+.status-offline {
+    color: #aaa;
+    background: #f9f9f9;
+}
+
+.stock-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f4f7f6;
+    padding: 5px;
+    border-radius: 12px;
+}
+
+.btn-step {
+    width: 35px;
+    height: 35px;
+    border: none;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.input-mini {
+    width: 45px;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    outline: none;
+}
+
+/* Медиатека */
+.upload-zone {
+    padding: 30px 20px;
+    margin-bottom: 40px;
+    text-align: center;
+    border: 2px dashed #DCAEAE;
+    transition: 0.3s;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    color: #DCAEAE;
+    margin-bottom: 15px;
+}
+
+.upload-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.btn-choose {
+    background: #111;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    max-width: 250px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+@media (min-width: 600px) {
+    .gallery-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 25px;
+    }
+}
+
+.media-card {
+    position: relative;
+    background: #fff;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    border: 1px solid #eee;
+    transition: 0.3s;
+}
+
+    .media-card:active {
+        transform: scale(0.96);
+    }
+
+    .media-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.media-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: 0.3s;
+    color: white;
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 10px;
+}
+
+.media-card:hover .media-overlay {
+    opacity: 1;
+}
+
+#uploadStatus {
+    margin-top: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Заказы */
+.order-id {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #111;
+    display: block;
+}
+
+.contact-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+    margin-top: 5px;
+}
+
+    .contact-link i {
+        color: #DCAEAE;
+        width: 16px;
+    }
+
+.product-line {
+    font-size: 0.8rem;
+    color: #777;
+    margin-bottom: 4px;
+}
+
+.price-total {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #111;
+}
+
+.status-select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    background: #fff;
+    outline: none;
+}
+
+.btn-update {
+    width: 100%;
+    background: #111;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* ==================================================
+   АДАПТИВНОСТЬ
+   ================================================== */
+
+@media (max-width: 600px) {
+    .input-group {
+        flex-direction: column;
+    }
+
+    .add-cat-card .btn-submit {
+        padding: 15px;
+    }
+
+    .page-title {
+        font-size: 1.4rem;
+        text-align: center;
+    }
+
+    .category-card {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Мобильная таблица для УПРАВЛЕНИЯ ТОВАРАМИ */
+    .content-card .admin-table thead {
+        display: none;
+    }
+
+    .content-card .admin-table tr {
+        display: block;
+        padding: 20px;
+        border-bottom: 8px solid #f4f7f6;
+    }
+
+    .content-card .admin-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0 !important;
+        border: none !important;
+        font-size: 0.9rem;
+    }
+
+        .content-card .admin-table td:first-child {
+            flex-direction: row;
+            justify-content: flex-start;
+            gap: 15px;
+            border-bottom: 1px solid #eee !important;
+            padding-bottom: 15px !important;
+            margin-bottom: 10px;
+        }
+
+        .content-card .admin-table td:nth-child(2)::before {
+            content: "Категория";
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .content-card .admin-table td:nth-child(3)::before {
+            content: "Материал";
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .content-card .admin-table td:nth-child(4)::before {
+            content: "Цена";
+            color: #999;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+    .content-card .product-img {
+        width: 60px !important;
+        height: 75px !important;
+    }
+
+    /* Мобильная таблица для ИНВЕНТАРЯ */
+    .inventory-card .admin-table tr {
+        display: block;
+        padding: 15px;
+        border-bottom: 8px solid #f4f7f6;
+    }
+
+    .inventory-card .admin-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0 !important;
+        border: none !important;
+    }
+
+        .inventory-card .admin-table td:first-child {
+            border-bottom: 1px solid #eee !important;
+            margin-bottom: 10px;
+            padding-bottom: 15px !important;
+        }
+}
+
+@media (max-width: 992px) {
+    /* Перестроение Каркаса (из _AdminLayout) */
+    .mobile-header {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .admin-sidebar {
+        transform: translateX(-260px);
+    }
+
+        .admin-sidebar.show {
+            transform: translateX(0);
+        }
+
+    /* Вот этот фикс должен быть строго таким: */
+    .admin-main {
+        margin-left: 0 !important;
+        width: 100% !important; /* На мобилках забираем все 100% экрана */
+        padding: 80px 15px 40px !important; /* Уменьшаем боковые отступы, чтобы контент не уезжал */
+    }
+
+    .sidebar-overlay.show {
+        display: block;
+    }
+    /* Мобильная таблица для ЗАКАЗОВ */
+    .orders-card .admin-table thead {
+        display: none;
+    }
+
+    .orders-card .admin-table tr {
+        display: block;
+        padding: 20px;
+        border-bottom: 10px solid #f4f7f6;
+    }
+
+    .orders-card .admin-table td {
+        display: block;
+        width: 100% !important;
+        padding: 10px 0 !important;
+        border: none !important;
+    }
+
+        .orders-card .admin-table td::before {
+            display: block;
+            font-size: 0.65rem;
+            color: #bbb;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .orders-card .admin-table td:nth-child(1)::before {
+            content: "Заказ";
+        }
+
+        .orders-card .admin-table td:nth-child(2)::before {
+            content: "Клиент";
+        }
+
+        .orders-card .admin-table td:nth-child(3)::before {
+            content: "Адрес";
+        }
+
+        .orders-card .admin-table td:nth-child(4)::before {
+            content: "Товары";
+        }
+
+        .orders-card .admin-table td:nth-child(5)::before {
+            content: "Сумма";
+        }
+
+        .orders-card .admin-table td:nth-child(6)::before {
+            content: "Управление";
+        }
+
+    .track-input {
+        font-size: 16px !important;
+    }
+}

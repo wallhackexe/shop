@@ -1,0 +1,1172 @@
+﻿@model VesnaStore.Models.User
+@{
+    ViewData["Title"] = "Личный кабинет — VESNA";
+    Layout = "_Layout";
+    var favProducts = ViewBag.FavoriteProducts as List<VesnaStore.Models.Product> ?? new List<VesnaStore.Models.Product>();
+}
+
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 160px auto 100px;
+        padding: 0 20px;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    .user-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: #fff;
+        padding: 30px;
+        border-radius: 25px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+        margin-bottom: 30px;
+        border: 1px solid #f0f0f0;
+    }
+
+    .user-avatar {
+        width: 75px;
+        height: 75px;
+        background: #fdfdfd;
+        border: 2px solid #DCAEAE;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Playfair Display', serif;
+        font-size: 2rem;
+        color: #DCAEAE;
+        font-weight: 700;
+    }
+
+    .user-name {
+        font-weight: 800;
+        color: #000;
+        font-size: 1.6rem;
+        margin: 0;
+    }
+
+    .user-stats-row {
+        display: flex;
+        gap: 25px;
+        margin-top: 8px;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-val {
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #000;
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+    }
+
+    .profile-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 40px;
+        align-items: start;
+    }
+
+    .sidebar-inner {
+        background: white;
+        border-radius: 20px;
+        padding: 10px 0;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+        border: 1px solid #f0f0f0;
+    }
+
+    .nav-tab {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 20px 25px;
+        background: none;
+        border: none;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800 !important;
+        font-size: 0.8rem;
+        color: #000 !important;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        cursor: pointer;
+        text-align: left;
+        transition: 0.3s;
+    }
+
+        .nav-tab:hover {
+            background: #f9f9f9;
+        }
+
+        .nav-tab.active {
+            background: #f5f5f5;
+            color: #DCAEAE !important;
+        }
+
+        .nav-tab i {
+            margin-right: 15px;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+    .logout-link {
+        color: #e74c3c !important;
+    }
+
+    .badge-count {
+        color: #DCAEAE;
+        font-size: 0.75rem;
+        font-weight: 800;
+        margin-left: auto;
+    }
+
+    .arrow-mobile {
+        display: none;
+    }
+
+    .sidebar-sep {
+        height: 1px;
+        background: #eee;
+        margin: 10px 20px;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+        .tab-content.active {
+            display: block;
+            animation: profileFadeIn 0.4s ease-out;
+        }
+
+    @@keyframes profileFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .profile-fav-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
+        gap: 25px !important;
+        width: 100% !important;
+        align-items: start !important;
+    }
+
+    .product-card {
+        background: #fff;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.01);
+        position: relative;
+        border: 1px solid #f0f0f0;
+    }
+
+    .product-image-box {
+        width: 100% !important;
+        aspect-ratio: 3/4 !important;
+        overflow: hidden !important;
+        position: relative !important;
+        background: #f9f9f9;
+    }
+
+        .product-image-box img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+
+    .product-details {
+        padding: 15px;
+    }
+
+    .product-category {
+        font-size: 0.7rem;
+        color: #aaa;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: block;
+    }
+
+    .product-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 5px 0 10px;
+        color: #333;
+    }
+
+    .price {
+        font-weight: 800;
+        color: #DCAEAE;
+        font-size: 1rem;
+    }
+
+    /* Заказы */
+    .orders-stack-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 700px;
+        width: 100%;
+    }
+
+    .order-mobile-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid #eee;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.01);
+    }
+
+    .order-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .o-status-badge {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border-radius: 50px;
+        background: #f9f9f9;
+    }
+
+        .o-status-badge.новый {
+            color: #f39c12;
+            background: #fffcf0;
+        }
+
+        .o-status-badge.успешно, .o-status-badge.доставлен {
+            color: #27ae60;
+            background: #f0fff5;
+        }
+
+        .o-status-badge.отменен {
+            color: #e74c3c;
+            background: #fff0f0;
+        }
+
+    .o-price-total {
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: #000;
+    }
+
+    .order-image-strip {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+
+    .o-img-wrap {
+        width: 55px;
+        height: 75px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #f0f0f0;
+    }
+
+        .o-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .order-footer-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #f9f9f9;
+        padding-top: 12px;
+        gap: 10px;
+    }
+
+    .o-footer-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        text-align: left;
+    }
+
+    .o-id {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #000;
+    }
+
+    .o-date {
+        font-size: 0.75rem;
+        color: #999;
+        font-weight: 600;
+    }
+
+    .profile-rev-btn {
+        background: #000 !important;
+        color: #fff !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 30px !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 1px;
+        cursor: pointer !important;
+        text-transform: uppercase !important;
+        transition: 0.2s ease !important;
+        flex-shrink: 0;
+    }
+
+        .profile-rev-btn:hover {
+            background: #DCAEAE !important;
+        }
+
+    .settings-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 600px;
+    }
+
+    .settings-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 25px;
+        border: 1px solid #f0f0f0;
+    }
+
+    .s-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .s-info label {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: #aaa;
+        text-transform: uppercase;
+    }
+
+    .s-info p {
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: #000;
+        margin: 5px 0 0;
+    }
+
+    .s-edit-btn {
+        background: none;
+        border: none;
+        color: #DCAEAE;
+        font-weight: 800;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .s-edit-form {
+        display: none;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #f9f9f9;
+    }
+
+    .vesna-input-bold {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #000;
+        border-radius: 12px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+        outline: none;
+        margin-bottom: 12px;
+    }
+
+    .btn-black-sm {
+        background: #000;
+        color: #fff;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 50px;
+        font-weight: 800;
+        font-size: 0.7rem;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+
+    .review-selection-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        padding: 20px 0;
+    }
+
+    .review-sel-card {
+        cursor: pointer;
+        border: 2px solid #f0f0f0;
+        border-radius: 15px;
+        padding: 10px;
+        transition: 0.3s;
+        text-align: center;
+    }
+
+        .review-sel-card:hover {
+            border-color: #DCAEAE;
+            transform: translateY(-3px);
+        }
+
+        .review-sel-card img {
+            width: 100%;
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .review-sel-card p {
+            font-size: 0.75rem;
+            font-weight: 800;
+            margin: 0;
+            color: #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+    .star-rating-select {
+        font-size: 1.8rem;
+        color: #eee;
+        cursor: pointer;
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+        .star-rating-select i.selected {
+            color: #FFD700;
+        }
+
+    @@media (max-width: 992px) {
+        .profile-container {
+            margin-top: 100px;
+            padding: 0 10px 80px;
+        }
+
+        .profile-layout {
+            display: block;
+        }
+
+        .profile-sidebar {
+            margin-bottom: 25px;
+        }
+
+        .user-summary-card {
+            padding: 20px;
+            margin: 0 -10px 20px -10px;
+            border-radius: 0;
+            box-shadow: none;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sidebar-inner {
+            border-radius: 15px;
+            box-shadow: none;
+            border: 1px solid #eee;
+        }
+
+        .nav-tab {
+            border-bottom: 1px solid #f5f5f5;
+            border-radius: 0;
+            background: white;
+        }
+
+            .nav-tab .arrow-mobile {
+                display: block !important;
+                margin-left: auto;
+                opacity: 0.3;
+            }
+
+        .profile-fav-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+        }
+
+        .orders-stack-mobile {
+            max-width: 100% !important;
+        }
+
+        .order-mobile-card {
+            width: 100% !important;
+        }
+
+        .order-footer-info {
+            align-items: flex-end;
+        }
+    }
+
+    .profile-cancel-btn {
+        background: transparent !important;
+        color: #000 !important;
+        border: 2px solid #000 !important;
+        padding: 10px 25px !important;
+        border-radius: 30px !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 1px;
+        cursor: pointer !important;
+        text-transform: uppercase !important;
+        transition: 0.3s ease !important;
+        margin-right: 10px;
+    }
+
+        .profile-cancel-btn:hover {
+            background: #000 !important;
+            color: #fff !important;
+        }
+
+    .swal2-actions {
+        gap: 10px !important;
+    }
+
+    .profile-fav-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+        gap: 40px 25px !important;
+        width: 100% !important;
+    }
+
+    .product-image-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 15px;
+    }
+
+    .image-hover-actions {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: 0.3s ease;
+    }
+
+    .product-image-box:hover .image-hover-actions {
+        opacity: 1;
+    }
+
+    .btn-quick-view {
+        background: #fff;
+        color: #000;
+        border: none;
+        padding: 12px 25px;
+        font-weight: 800;
+        font-size: 0.7rem;
+        border-radius: 50px;
+        cursor: pointer;
+    }
+
+    .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 10px;
+    }
+
+        .product-rating i {
+            font-size: 0.75rem;
+            color: #FFD700;
+        }
+
+    .rating-value {
+        font-size: 0.8rem;
+        color: #aaa;
+        margin-left: 5px;
+        font-weight: 500;
+    }
+
+    .cart-controls-wrapper {
+        position: relative;
+    }
+
+    .btn-add-cart {
+        background: #000;
+        color: #fff;
+        border: none;
+        width: 35px;
+        height: 35px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .btn-add-cart:hover {
+            background: #DCAEAE;
+        }
+
+    .qty-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #f5f5f5;
+        border-radius: 10px;
+        padding: 2px 8px;
+    }
+
+    .qty-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 5px;
+    }
+
+    .qty-val {
+        font-weight: 800;
+        font-size: 0.9rem;
+        min-width: 15px;
+        text-align: center;
+    }
+</style>
+
+@Html.AntiForgeryToken()
+
+<div class="profile-container">
+    <div class="user-summary-card">
+        <div class="user-avatar">
+            <span>@Model.FullName.Substring(0, 1).ToUpper()</span>
+        </div>
+        <div class="user-main-info">
+            <h2 class="user-name">@Model.FullName</h2>
+            <div class="user-stats-row">
+                <div class="stat-item">
+                    <span class="stat-val">@Model.Email</span>
+                    <span class="stat-label">Основная почта</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-val">@(Model.Orders?.Count ?? 0)</span>
+                    <span class="stat-label">Всего заказов</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-layout">
+        <aside class="profile-sidebar">
+            <div class="sidebar-inner">
+                <button class="nav-tab active" onclick="profileOpenTab(this, 'data-tab')">
+                    <i class="fa-regular fa-address-card"></i>
+                    <span class="nav-tab-text">Профиль</span>
+                    <i class="fa-solid fa-chevron-right arrow-mobile"></i>
+                </button>
+                <button class="nav-tab" onclick="profileOpenTab(this, 'favs-tab')">
+                    <i class="fa-regular fa-heart"></i>
+                    <span class="nav-tab-text">Избранное</span>
+                    <span class="badge-count">@favProducts.Count</span>
+                    <i class="fa-solid fa-chevron-right arrow-mobile"></i>
+                </button>
+                <button class="nav-tab" onclick="profileOpenTab(this, 'orders-tab')">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    <span class="nav-tab-text">Заказы</span>
+                    <i class="fa-solid fa-chevron-right arrow-mobile"></i>
+                </button>
+                <button class="nav-tab" onclick="profileOpenTab(this, 'notifications-tab')">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="nav-tab-text">Уведомления</span>
+                    <i class="fa-solid fa-chevron-right arrow-mobile"></i>
+                </button>
+                <div class="sidebar-sep"></div>
+                <a href="/Account/Logout" class="nav-tab logout-link" style="text-decoration: none;">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Выйти</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="profile-main">
+            <section id="data-tab" class="tab-content active">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <div class="s-card-header">
+                            <div class="s-info"><label>ФИО</label><p id="display-name">@Model.FullName</p></div>
+                            <button class="s-edit-btn" onclick="profileToggleEdit('name-form')">ИЗМЕНИТЬ</button>
+                        </div>
+                        <div id="name-form" class="s-edit-form">
+                            <input type="text" id="input-name" value="@Model.FullName" class="vesna-input-bold" />
+                            <button class="btn-black-sm" onclick="profileSaveName()">СОХРАНИТЬ</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="s-card-header">
+                            <div class="s-info"><label>EMAIL</label><p id="display-email">@Model.Email</p></div>
+                            <button class="s-edit-btn" onclick="profileToggleEdit('email-form')">ИЗМЕНИТЬ</button>
+                        </div>
+                        <div id="email-form" class="s-edit-form">
+                            <input type="email" id="input-email" placeholder="Новый Email" class="vesna-input-bold" />
+                            <input type="text" id="input-email-code" placeholder="Код подтверждения (123456)" class="vesna-input-bold" />
+                            <button class="btn-black-sm" onclick="profileSaveEmail()">ПОДТВЕРДИТЬ</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="s-card-header">
+                            <div class="s-info"><label>ПАРОЛЬ</label><p>**********</p></div>
+                            <button class="s-edit-btn" onclick="profileToggleEdit('pass-form')">ИЗМЕНИТЬ</button>
+                        </div>
+                        <div id="pass-form" class="s-edit-form">
+                            <input type="password" id="old-pass" placeholder="Старый пароль" class="vesna-input-bold" />
+                            <input type="password" id="new-pass" placeholder="Новый пароль" class="vesna-input-bold" />
+                            <input type="password" id="confirm-pass" placeholder="Повторите новый пароль" class="vesna-input-bold" />
+                            <button class="btn-black-sm" onclick="profileSavePassword()">ОБНОВИТЬ ПАРОЛЬ</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="favs-tab" class="tab-content">
+                @if (favProducts.Any())
+                {
+                    <div class="product-grid profile-fav-grid">
+                        @foreach (var item in favProducts)
+                        {
+                            var reviewsCount = item.Reviews?.Count ?? 0;
+                            var avgRating = item.Reviews != null && item.Reviews.Any() ? item.Reviews.Average(r => r.Rating) : 5.0;
+
+                            @* ПРОВЕРКА НА СКРЫТОСТЬ *@
+                            @* Замени на item.IsHidden, если используешь это свойство *@
+                            bool isUnavailable = item.StockQuantity <= 0;
+
+                            <div class="product-card" data-id="@item.ProductID" style="@(isUnavailable ? "opacity: 0.65; filter: grayscale(80%);" : "")">
+                                <div class="product-image-box">
+
+                                    @* ПЛАШКА "ЗАКОНЧИЛСЯ" *@
+                                    @if (isUnavailable)
+                                    {
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #fff; padding: 8px 15px; border-radius: 8px; z-index: 5; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; pointer-events: none; text-align: center; width: 80%;">
+                                            Закончился
+                                        </div>
+                                    }
+
+                                    @* КНОПКА ЛАЙКА (Единственный активный элемент на скрытом товаре) *@
+                                    <button class="wishlist-heart active" onclick="event.preventDefault(); toggleLike(@item.ProductID, this)" style="position: absolute; top: 10px; right: 10px; z-index: 10; border: none; background: rgba(255,255,255,0.7); border-radius: 50%; width: 32px; height: 32px; cursor: pointer;">
+                                        <i class="fa-solid fa-heart" style="color: #DCAEAE;"></i>
+                                    </button>
+
+                                    <img src="@item.ImageURL" alt="@item.Title" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 15px;">
+
+                                    @* ВЫВОДИМ ССЫЛКУ "ПРОСМОТР" ТОЛЬКО ЕСЛИ ТОВАР ДОСТУПЕН *@
+                                    @if (!isUnavailable)
+                                    {
+                                        <div class="image-hover-actions">
+                                            <a href="/Home/Details/@item.ProductID" class="btn-quick-view" style="text-decoration:none;">ПРОСМОТР</a>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="product-details" style="padding: 15px 5px;">
+                                    <span class="product-category" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px;">
+                                        @(item.Category?.Name?.ToUpper() ?? "БЕЗ КАТЕГОРИИ")
+                                    </span>
+
+                                    <h3 class="product-title" style="font-size: 1rem; font-weight: 500; margin: 5px 0 5px;">@item.Title</h3>
+
+                                    <div class="product-rating" style="display: flex; align-items: center; gap: 4px; margin-bottom: 10px;">
+                                        @for (int i = 0; i < 5; i++)
+                                        {
+                                            <i class="fa-solid fa-star"></i>
+                                        }
+                                        <span class="rating-value">
+                                            @avgRating.ToString("F1") @(reviewsCount > 0 ? $"({reviewsCount})" : "")
+                                        </span>
+                                    </div>
+
+                                    <div class="product-price-row" style="display: flex; justify-content: space-between; align-items: center; height: 35px;">
+                                        <span class="price" style="font-weight: 800; font-size: 1.1rem; color: #DCAEAE;">@item.Price.ToString("N0") ₽</span>
+
+                                        @* ВЫВОДИМ КНОПКУ КОРЗИНЫ ТОЛЬКО ЕСЛИ ТОВАР ДОСТУПЕН *@
+                                        @if (!isUnavailable)
+                                        {
+                                            <div class="cart-controls-wrapper" data-product-id="@item.ProductID">
+                                                <button class="btn-add-cart initial-add-btn">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                </button>
+
+                                                <div class="qty-controls" style="display: none;">
+                                                    <button class="qty-btn minus"><i class="fa-solid fa-minus"></i></button>
+                                                    <span class="qty-val">1</span>
+                                                    <button class="qty-btn plus"><i class="fa-solid fa-plus"></i></button>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="settings-card text-center" style="padding: 50px;">
+                        <p style="color: #aaa; font-weight: 800; margin: 0 0 15px;">В ИЗБРАННОМ ПОКА ПУСТО</p>
+                        <a href="/Home/Catalog" class="btn-black-sm" style="text-decoration: none; display: inline-block;">В каталог</a>
+                    </div>
+                }
+            </section>
+
+            <section id="orders-tab" class="tab-content">
+                @if (Model.Orders != null && Model.Orders.Any())
+                {
+                    <div class="orders-stack-mobile">
+                        @foreach (var order in Model.Orders.OrderByDescending(o => o.OrderDate))
+                        {
+                            <div class="order-mobile-card">
+                                <div class="order-header-row">
+                                    <span class="o-status-badge @order.Status?.ToLower()">@order.Status</span>
+                                    <span class="o-price-total">@order.TotalAmount.ToString("N0") ₽</span>
+                                </div>
+
+                                <div class="order-image-strip">
+                                    @foreach (var oi in order.OrderItems)
+                                    {
+                                        <div class="o-img-wrap">
+                                            <img src="@oi.Product?.ImageURL" alt="item" />
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="order-footer-info">
+                                    <div class="o-footer-text">
+                                        <span class="o-id">Заказ №@order.OrderID</span>
+                                        <span class="o-date">@order.OrderDate.ToString("dd.MM.yyyy")</span>
+                                    </div>
+
+                                    @if (order.Status == "Завершен")
+                                    {
+                                        var productsData = order.OrderItems.Select(oi => new
+                                        {
+                                            id = oi.ProductID,
+                                            title = oi.Product?.Title ?? "Товар",
+                                            img = oi.Product?.ImageURL ?? ""
+                                        });
+                                        var jsonProducts = System.Text.Json.JsonSerializer.Serialize(productsData);
+
+                                        <button class="profile-rev-btn"
+                                                data-products="@jsonProducts"
+                                                onclick="profileHandleReview(this)">
+                                            Отзыв
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="settings-card text-center" style="padding: 50px;">
+                        <p style="color: #aaa; font-weight: 800; margin: 0;">У ВАС ПОКА НЕТ ЗАКАЗОВ</p>
+                    </div>
+                }
+            </section>
+
+            <section id="notifications-tab" class="tab-content">
+                <div class="settings-grid">
+                    @{
+                        var notifications = ViewBag.Notifications as List<VesnaStore.Models.UserNotification> ?? new List<VesnaStore.Models.UserNotification>();
+                    }
+
+                    @if (notifications.Any())
+                    {
+                        foreach (var note in notifications)
+                        {
+                            <div class="settings-card" style="border-left: 4px solid #DCAEAE; position: relative; background: #fff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <span style="font-weight: 800; font-size: 0.65rem; color: #DCAEAE; text-transform: uppercase; letter-spacing: 1px;">
+                                        Уведомление магазина
+                                    </span>
+                                    <span style="font-size: 0.75rem; color: #aaa; font-weight: 600;">
+                                        @note.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                    </span>
+                                </div>
+                                <h4 style="font-weight: 800; font-size: 1.1rem; color: #000; margin: 0 0 8px; text-transform: uppercase;">
+                                    @note.Title
+                                </h4>
+                                <p style="font-weight: 600; font-size: 0.85rem; color: #444; margin: 0; line-height: 1.5;">
+                                    @note.Message
+                                </p>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="settings-card text-center" style="padding: 50px; background: #fff;">
+                            <p style="color: #aaa; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                                У вас нет новых уведомлений
+                            </p>
+                        </div>
+                    }
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    // Вспомогательная функция для получения CSRF токена
+    const getProfileCsrfToken = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // 1. Обработка клика на кнопку "Отзыв" (Выбор товара)
+    window.profileHandleReview = function (button) {
+        const rawData = button.getAttribute('data-products');
+        const products = JSON.parse(rawData);
+
+        if (products.length === 1) {
+            profileOpenReviewModal(products[0].id, products[0].title, products[0].img);
+        } else {
+            let gridHtml = '<div class="review-selection-grid">';
+            products.forEach(p => {
+                gridHtml += `
+                                <div class="review-sel-card" onclick="Swal.close(); profileOpenReviewModal(${p.id}, '${p.title.replace(/'/g, "\\'")}', '${p.img}')">
+                                    <img src="${p.img}" />
+                                    <p>${p.title}</p>
+                                </div>
+                            `;
+            });
+            gridHtml += '</div>';
+
+            Swal.fire({
+                title: 'ВЫБЕРИТЕ ТОВАР ДЛЯ ОТЗЫВА',
+                html: gridHtml,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'ОТМЕНА',
+                customClass: {
+                    popup: 'vesna-popup',
+                    title: 'vesna-title',
+                    cancelButton: 'profile-cancel-btn'
+                },
+                buttonsStyling: false
+            });
+        }
+    };
+
+    // 2. Открытие окна отправки отзыва (С ПОЭТАПНОЙ ЗАГРУЗКОЙ ЧЕРЕЗ ТВОЙ PROXYUPLOAD)
+    window.profileOpenReviewModal = function (productId, productName, productImg) {
+        window.currentRating = 5;
+
+        Swal.fire({
+            title: `ОСТАВИТЬ ОТЗЫВ`,
+            html: `
+                            <div style="display:flex; flex-direction:column; gap:15px; text-align:left;">
+                                <div style="display: flex; gap: 15px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 5px;">
+                                    <img src="${productImg}" style="width: 55px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; flex-shrink: 0;" />
+                                    <div style="font-weight: 800; font-size: 0.9rem; color: #000; text-transform: uppercase; line-height: 1.4;">${productName}</div>
+                                </div>
+
+                                <div class="star-rating-select" id="star-selector">
+                                    <i class="fa-solid fa-star selected" data-val="1"></i>
+                                    <i class="fa-solid fa-star selected" data-val="2"></i>
+                                    <i class="fa-solid fa-star selected" data-val="3"></i>
+                                    <i class="fa-solid fa-star selected" data-val="4"></i>
+                                    <i class="fa-solid fa-star selected" data-val="5"></i>
+                                </div>
+
+                                <textarea id="rev-comment" class="vesna-input-bold" placeholder="Поделитесь вашим мнением о качестве вещи..." style="height:120px; resize:none;"></textarea>
+
+                                <label style="font-weight:800; font-size:0.65rem; color:#aaa; text-transform:uppercase; margin-bottom: -5px;">Прикрепить фото к отзыву</label>
+                                <input type="file" id="rev-image" class="vesna-input-bold" accept="image/*">
+                            </div>
+                        `,
+            showCancelButton: true,
+            confirmButtonText: 'ОПУБЛИКОВАТЬ',
+            cancelButtonText: 'ОТМЕНА',
+            customClass: {
+                confirmButton: 'profile-rev-btn',
+                cancelButton: 'profile-cancel-btn',
+                popup: 'vesna-popup',
+                title: 'vesna-title'
+            },
+            buttonsStyling: false,
+            didOpen: () => {
+                const stars = document.querySelectorAll('#star-selector i');
+                stars.forEach(s => s.onclick = () => {
+                    stars.forEach(i => i.classList.remove('selected'));
+                    let val = parseInt(s.getAttribute('data-val'));
+                    for (let i = 0; i < val; i++) stars[i].classList.add('active', 'selected');
+                    window.currentRating = val;
+                });
+            },
+            preConfirm: async () => {
+                const comment = document.getElementById('rev-comment').value;
+                if (!comment.trim()) {
+                    Swal.showValidationMessage('Пожалуйста, напишите текст отзыва');
+                    return false;
+                }
+
+                const fileInput = document.getElementById('rev-image').files[0];
+                let finalImageUrl = null;
+
+                // ЭТАП 1: Если прикреплено фото, сначала прогоняем через твой локальный ProxyUpload
+                if (fileInput) {
+                    Swal.showLoading(); // Включаем спиннер, пока идет выгрузка
+                    const uploaderData = new FormData();
+                    uploaderData.append('image', fileInput);
+
+                    try {
+                        const uploadResponse = await fetch('/Admin/ProxyUpload', {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': getProfileCsrfToken() },
+                            body: uploaderData
+                        });
+
+                        if (!uploadResponse.ok) throw new Error('Ошибка при отправке фото в прокси');
+
+                        const uploadResult = await uploadResponse.json();
+
+                        if (uploadResult.success && uploadResult.data && uploadResult.data.url) {
+                            finalImageUrl = uploadResult.data.url; // Достаем готовую i.ibb.co ссылку!
+                        } else {
+                            throw new Error(uploadResult.message || 'Облако ImgBB отклонило изображение');
+                        }
+                    } catch (err) {
+                        Swal.showValidationMessage(`Ошибка загрузки фото: ${err.message}`);
+                        return false;
+                    }
+                }
+
+                // ЭТАП 2: Отправляем готовые текстовые данные на бэкенд отзывов
+                // Теперь мы передаем строку imageUrl, бэкенд примет её без IFormFile!
+                const token = getProfileCsrfToken();
+                const reviewParams = new URLSearchParams();
+                reviewParams.append('productId', productId);
+                reviewParams.append('rating', window.currentRating);
+                reviewParams.append('comment', comment.trim());
+                if (finalImageUrl) {
+                    reviewParams.append('imageUrl', finalImageUrl);
+                }
+
+                try {
+                    const response = await fetch('/User/SubmitReview', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': token
+                        },
+                        body: reviewParams.toString()
+                    });
+
+                    if (!response.ok) throw new Error(`Ошибка сервера (Статус ${response.status})`);
+
+                    const data = await response.json();
+                    if (!data.success) throw new Error(data.message || 'Не удалось сохранить отзыв');
+
+                    return data;
+                } catch (err) {
+                    Swal.showValidationMessage(`Ошибка сохранения: ${err.message}`);
+                    return false;
+                }
+            }
+        }).then(result => {
+            if (result.value && result.value.success) {
+                Swal.fire({ icon: 'success', title: 'ОПУБЛИКОВАНО', text: 'Спасибо за ваш отзыв!', showConfirmButton: false, timer: 2000 })
+                    .then(() => location.reload());
+            }
+        });
+    };
+
+    // 3. Переключение табов личного кабинета
+    window.profileOpenTab = function (btn, tabId) {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        const target = document.getElementById(tabId);
+        if (target) target.classList.add('active');
+    };
+
+    // 4. Логика форм редактирования данных профиля
+    window.profileToggleEdit = function (formId) {
+        const form = document.getElementById(formId);
+        if (form) form.style.display = form.style.display === 'block' ? 'none' : 'block';
+    };
+
+    window.profileSaveName = function () {
+        const name = document.getElementById('input-name').value;
+        fetch('/User/UpdateName?fullName=' + encodeURIComponent(name), { method: 'POST' })
+            .then(res => res.json()).then(data => {
+                if (data.success) { document.getElementById('display-name').innerText = name; profileToggleEdit('name-form'); }
+            });
+    };
+
+    window.profileSaveEmail = function () {
+        const email = document.getElementById('input-email').value;
+        const code = document.getElementById('input-email-code').value;
+        fetch(`/User/ChangeEmail?newEmail=${email}&code=${code}`, { method: 'POST' })
+            .then(res => res.json()).then(data => {
+                if (data.success) { document.getElementById('display-email').innerText = email; profileToggleEdit('email-form'); }
+            });
+    };
+
+    window.profileSavePassword = function () {
+        const oldP = document.getElementById('old-pass').value;
+        const newP = document.getElementById('new-pass').value;
+        const confP = document.getElementById('confirm-pass').value;
+        fetch(`/User/ChangePassword?oldPass=${oldP}&newPass=${newP}&confirmPass=${confP}`, { method: 'POST' })
+            .then(res => res.json()).then(data => {
+                if (data.success) { profileToggleEdit('pass-form'); Swal.fire('Успех', 'Пароль изменен', 'success'); }
+            });
+    };
+    // 5. Окно предупреждения для скрытых товаров в избранном
+    window.showUnavailableAlert = function () {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'ОЙ...',
+                html: 'Этот товар был снят с продажи или временно <b>закончился</b>.<br><br>Вы можете удалить его из избранного, нажав на сердечко.',
+                icon: 'info',
+                iconColor: '#DCAEAE',
+                confirmButtonText: 'ПОНЯТНО',
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'vesna-popup',
+                    title: 'vesna-title',
+                    htmlContainer: 'vesna-html',
+                    confirmButton: 'profile-cancel-btn'
+                }
+            });
+        } else {
+            alert('К сожалению, этот товар закончился.');
+        }
+    };
+</script>

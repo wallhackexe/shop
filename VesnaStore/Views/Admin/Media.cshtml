@@ -1,0 +1,103 @@
+﻿@model IEnumerable<VesnaStore.Models.MediaFile>
+@{
+    ViewData["Title"] = "Медиатека";
+    Layout = "_AdminLayout";
+}
+<style>
+    .media-card {
+        position: relative;
+    }
+
+    .delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(255, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        z-index: 10;
+    }
+
+        .delete-btn:hover {
+            background: red;
+        }
+</style>
+
+<div class="media-container">
+    <h1 class="page-title">Медиатека</h1>
+
+    <!-- Блок загрузки -->
+    <div class="upload-zone">
+        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+        <h3 style="margin-top: 0; font-size: 1.1rem;">Загрузить фото</h3>
+        <p class="upload-text">Файлы будут автоматически загружены в облако ImgBB</p>
+
+        <input type="file" id="cloudUploader" accept="image/*" multiple style="display: none;" />
+        <button onclick="document.getElementById('cloudUploader').click()" class="btn-choose">Выбрать файлы</button>
+        <div id="uploadStatus"></div>
+    </div>
+
+    <!-- Галерея -->
+    <h3 style="margin-bottom: 20px; font-size: 1.1rem; color: #999; text-transform: uppercase; letter-spacing: 1px;">Галерея</h3>
+
+    <div class="gallery-grid">
+        @foreach (var item in Model)
+        {
+            <div class="media-card" onclick="copyToClipboard('@item.Url')">
+                <button class="delete-btn" onclick="deleteMedia(@item.Id, event)">×</button>
+
+                <img src="@item.Url" loading="lazy" />
+
+                <div class="media-overlay">
+                    <span>Кликни, чтобы<br>копировать URL</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+<script>
+    async function deleteMedia(id, event) {
+        event.stopPropagation(); // Важно: предотвращает копирование при удалении
+
+        if (!confirm('Удалить это фото?')) return;
+
+        let response = await fetch('/Admin/DeleteMedia/' + id, { method: 'POST' });
+        let result = await response.json();
+
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.message);
+        }
+    }
+
+    // Универсальная функция копирования
+    function copyToClipboard(text) {
+        // Проверяем, есть ли поддержка современного API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Ссылка скопирована!");
+            }).catch(err => {
+                console.error('Ошибка копирования: ', err);
+            });
+        } else {
+            // "Дедовский" метод для старых браузеров или отсутствия HTTPS
+            let textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            textArea.remove();
+            showToast("Скопировано!");
+        }
+    }
+
+    function showToast(msg) {
+        alert(msg); // Можно заменить на красивое всплывающее окно
+    }
+</script>

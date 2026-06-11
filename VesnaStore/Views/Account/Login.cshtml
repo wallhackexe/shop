@@ -1,0 +1,28 @@
+﻿@model VesnaStore.Models.User
+@{
+    ViewData["Title"] = "Вход";
+}
+
+<div class="auth-page">
+    <div class="auth-card">
+        <h2>Вход</h2>
+        <form asp-action="Login" method="post">
+            <div class="auth-form-group">
+                <label>Email</label>
+                <input asp-for="Email" class="auth-input" required />
+                <span asp-validation-for="Email" style="color:red; font-size:0.7rem;"></span>
+            </div>
+
+            <div class="auth-form-group">
+                <label>Пароль</label>
+                <input asp-for="Password" type="password" class="auth-input" required />
+                <span asp-validation-for="Password" style="color:red; font-size:0.7rem;"></span>
+            </div>
+
+            <button type="submit" class="btn-auth">Войти</button>
+        </form>
+        <div class="auth-footer-link">
+            Нет аккаунта? <a asp-action="Register">Регистрация</a>
+        </div>
+    </div>
+</div>
