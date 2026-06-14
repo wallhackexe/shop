@@ -93,21 +93,24 @@
 
                 <div class="inner-grid" style="margin-top: 20px;">
                     <div class="form-group">
-                        <label>Бренд</label>
-                        <input name="brandName" value="@Model.Brand?.BrandName" class="admin-input" list="brandList" placeholder="Введите название..." />
+                        <label>Бренд (выберите или впишите новый)</label>
+                        <input name="brandName" id="brandNameInput" value="@Model.Brand?.BrandName" class="admin-input" list="brandList" placeholder="Введите название..." />
                         <datalist id="brandList">
-                            @if (ViewBag.Brands != null)
+                            @if (ViewBag.BrandsList != null)
                             {
-                                foreach (var b in (IEnumerable<VesnaStore.Models.Brand>)ViewBag.Brands)
+                                foreach (var b in (IEnumerable<VesnaStore.Models.Brand>)ViewBag.BrandsList)
                                 {
-                                    <option value="@b.BrandName">@b.BrandCountry</option>
+                                    <option value="@b.BrandName" data-country="@b.BrandCountry"></option>
                                 }
                             }
                         </datalist>
+                        <button type="button" onclick="deleteSelectedBrand()" style="color:#d9534f; border:none; background:none; cursor:pointer; font-size: 0.8rem; margin-top: 5px; text-align: left; padding: 0;">
+                            <i class="fa-solid fa-trash"></i> Удалить этот бренд из БД
+                        </button>
                     </div>
                     <div class="form-group">
                         <label>Страна бренда</label>
-                        <input name="brandCountry" value="@Model.Brand?.BrandCountry" class="admin-input" placeholder="Россия" />
+                        <input name="brandCountry" id="brandCountryInput" value="@Model.Brand?.BrandCountry" class="admin-input" placeholder="Россия" />
                     </div>
                 </div>
 
@@ -567,4 +570,54 @@
             contents[i].style.display = "none";
         }
     });
+
+    // 1. Автоматическая подстановка страны при выборе бренда из списка
+    document.getElementById('brandNameInput').addEventListener('input', function () {
+        const selectedVal = this.value;
+        const options = document.querySelectorAll('#brandList option');
+
+        for (let opt of options) {
+            if (opt.value === selectedVal) {
+                const country = opt.getAttribute('data-country');
+                if (country) {
+                    document.getElementById('brandCountryInput').value = country;
+                }
+                break;
+            }
+        }
+    });
+
+    // 2. Функция удаления бренда через AJAX
+    function deleteSelectedBrand() {
+        const brandName = document.getElementById('brandNameInput').value.trim();
+        if (!brandName) {
+            alert("Сначала введите или выберите бренд для удаления.");
+            return;
+        }
+
+        if (confirm(`Вы уверены, что хотите удалить бренд "${brandName}" из БД?`)) {
+            // Достаем токен для защиты POST запроса (в Edit он уже есть из @Html.AntiForgeryToken())
+            const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenElement ? tokenElement.value : '';
+
+            fetch('/Admin/DeleteBrand?brandName=' + encodeURIComponent(brandName), {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Бренд удален!");
+                        document.getElementById('brandNameInput').value = '';
+                        document.getElementById('brandCountryInput').value = '';
+                        location.reload(); // Перезагружаем страницу, чтобы обновить datalist
+                    } else {
+                        alert("Ошибка: " + data.message);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+    }
 </script>

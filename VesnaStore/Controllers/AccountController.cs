@@ -182,26 +182,19 @@ namespace VesnaStore.Controllers
             {
                 HttpContext.Session.Remove("LoginAttempts");
 
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.Email),
-                    new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                    new Claim(ClaimTypes.Role, user.UserRole),
-                    new Claim("FullName", user.FullName ?? "")
-                };
+                // Генерация случайного 6-значного кода подтверждения
+                Random rand = new Random();
+                string verificationCode = rand.Next(100000, 999999).ToString();
 
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(identity);
+                // Сохраняем временные данные в сессию
+                HttpContext.Session.SetString("LoginVerificationCode", verificationCode);
+                HttpContext.Session.SetInt32("PendingUserId", user.UserID);
+                HttpContext.Session.SetString("PendingReturnUrl", returnUrl ?? "");
 
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                // Отправка кода на email пользователя
+                await SendEmailAsync(user.Email, "Код подтверждения входа — VESNA", $"Ваш одноразовый код для входа: <b>{verificationCode}</b>");
 
-                TempData["Success"] = "Вы успешно вошли в систему!";
-
-                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                {
-                    return Redirect(returnUrl);
-                }
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("VerifyLoginCode");
             }
 
             int attempts = HttpContext.Session.GetInt32("LoginAttempts") ?? 0;
@@ -219,6 +212,167 @@ namespace VesnaStore.Controllers
 
             ViewData["ReturnUrl"] = returnUrl;
             return View();
+        }
+
+        // Страница ввода кода подтверждения при входе
+        [HttpGet]
+        public IActionResult VerifyLoginCode() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyLoginCode(string code)
+        {
+            string sessionCode = HttpContext.Session.GetString("LoginVerificationCode");
+            int? userId = HttpContext.Session.GetInt32("PendingUserId");
+
+            if (!string.IsNullOrEmpty(sessionCode) && sessionCode == code?.Trim() && userId.HasValue)
+            {
+                var user = await _context.Users.FindAsync(userId.Value);
+                if (user != null)
+                {
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, user.Email),
+                        new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+                        new Claim(ClaimTypes.Role, user.UserRole),
+                        new Claim("FullName", user.FullName ?? "")
+                    };
+
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var principal = new ClaimsPrincipal(identity);
+
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+                    // Очистка сессии от временных данных аутентификации
+                    HttpContext.Session.Remove("LoginVerificationCode");
+                    HttpContext.Session.Remove("PendingUserId");
+
+                    string returnUrl = HttpContext.Session.GetString("PendingReturnUrl");
+                    HttpContext.Session.Remove("PendingReturnUrl");
+
+                    TempData["Success"] = "Вы успешно вошли в систему!";
+
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+                    return RedirectToAction("Index", "Home");
+                }
+            }
+
+            TempData["Error"] = "Неверный или устаревший код подтверждения.";
+            return View();
+        }
+
+        // --- ВОССТАНОВЛЕНИЕ ПАРОЛЯ ---
+        [HttpGet]
+        public IActionResult ForgotPassword() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                TempData["Error"] = "Пользователь с таким Email не найден в системе.";
+                return View();
+            }
+
+            Random rand = new Random();
+            string resetCode = rand.Next(100000, 999999).ToString();
+
+            HttpContext.Session.SetString("PasswordResetCode", resetCode);
+            HttpContext.Session.SetString("PasswordResetEmail", email);
+
+            await SendEmailAsync(email, "Восстановление пароля — VESNA", $"Ваш код для сброса пароля: <b>{resetCode}</b>");
+
+            return RedirectToAction("VerifyResetCode");
+        }
+
+        [HttpGet]
+        public IActionResult VerifyResetCode() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult VerifyResetCode(string code)
+        {
+            string sessionCode = HttpContext.Session.GetString("PasswordResetCode");
+
+            if (!string.IsNullOrEmpty(sessionCode) && sessionCode == code?.Trim())
+            {
+                HttpContext.Session.SetString("PasswordResetVerified", "true");
+                return RedirectToAction("ResetPassword");
+            }
+
+            TempData["Error"] = "Неверный код восстановления.";
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword()
+        {
+            if (HttpContext.Session.GetString("PasswordResetVerified") != "true")
+                return RedirectToAction("ForgotPassword");
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(string newPassword)
+        {
+            if (HttpContext.Session.GetString("PasswordResetVerified") != "true")
+                return RedirectToAction("ForgotPassword");
+
+            string email = HttpContext.Session.GetString("PasswordResetEmail");
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user != null && !string.IsNullOrWhiteSpace(newPassword))
+            {
+                user.PasswordHash = newPassword; // Запись нового пароля
+                _context.Update(user);
+                await _context.SaveChangesAsync();
+
+                // Полная очистка данных сессии сброса
+                HttpContext.Session.Remove("PasswordResetCode");
+                HttpContext.Session.Remove("PasswordResetEmail");
+                HttpContext.Session.Remove("PasswordResetVerified");
+
+                TempData["Success"] = "Пароль успешно изменен! Теперь вы можете войти с новым паролем.";
+                return RedirectToAction("Login");
+            }
+
+            TempData["Error"] = "Не удалось обновить пароль. Попробуйте еще раз.";
+            return View();
+        }
+
+        // --- ВСПОМОГАТЕЛЬНЫЙ МЕТОД ОТПРАВКИ ПОЧТЫ (SMTP) ---
+        private async Task SendEmailAsync(string toEmail, string subject, string body)
+        {
+            try
+            {
+                using (var message = new System.Net.Mail.MailMessage())
+                {
+                    message.To.Add(new System.Net.Mail.MailAddress(toEmail));
+                    message.From = new System.Net.Mail.MailAddress("fogetw@gmail.com", "VESNA Store");
+                    message.Subject = subject;
+                    message.Body = body;
+                    message.IsBodyHtml = true;
+
+                    using (var client = new System.Net.Mail.SmtpClient("smtp.gmail.com"))
+                    {
+                        client.Port = 587; // Твой порт SMTP сервера (обычно 587 или 465)
+                        client.Credentials = new System.Net.NetworkCredential("fogetw@gmail.com", "bdsdrcwoguatkecs");
+                        client.EnableSsl = true;
+                        await client.SendMailAsync(message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Критическая ошибка отправки почты: {ex.Message}");
+            }
         }
 
         // --- ВЫХОД (LOGOUT) ---

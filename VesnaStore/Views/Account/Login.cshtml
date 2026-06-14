@@ -6,21 +6,33 @@
 <div class="auth-page">
     <div class="auth-card">
         <h2>Вход</h2>
+
+        @if (TempData["Error"] != null)
+        {
+            <div style="color:red; font-size:0.85rem; margin-bottom:15px; text-align:center;">@TempData["Error"]</div>
+        }
+        @if (TempData["Success"] != null)
+        {
+            <div style="color:green; font-size:0.85rem; margin-bottom:15px; text-align:center;">@TempData["Success"]</div>
+        }
+
         <form asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
             <div class="auth-form-group">
                 <label>Email</label>
-                <input asp-for="Email" class="auth-input" required />
-                <span asp-validation-for="Email" style="color:red; font-size:0.7rem;"></span>
+                <input name="email" type="email" class="auth-input" required />
             </div>
 
             <div class="auth-form-group">
                 <label>Пароль</label>
-                <input asp-for="Password" type="password" class="auth-input" required />
-                <span asp-validation-for="Password" style="color:red; font-size:0.7rem;"></span>
+                <input name="password" type="password" class="auth-input" required />
             </div>
 
             <button type="submit" class="btn-auth">Войти</button>
         </form>
+        <div class="auth-footer-link" style="margin-top: 15px;">
+            <a asp-action="ForgotPassword" style="font-size: 0.85rem; color: #666; text-decoration: none;">Забыли пароль?</a>
+        </div>
         <div class="auth-footer-link">
             Нет аккаунта? <a asp-action="Register">Регистрация</a>
         </div>

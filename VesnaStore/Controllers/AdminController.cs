@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -62,29 +63,29 @@ namespace VesnaStore.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Brands = await _context.Brands.ToListAsync();
+            // Используем SelectList, чтобы HTML-хелпер понимал, что показывать и что сохранять
+            ViewBag.Categories = new SelectList(await _context.Categories.ToListAsync(), "CategoryID", "Name");
+            ViewBag.Brands = new SelectList(await _context.Brands.ToListAsync(), "BrandID", "BrandName");
+
+            ViewBag.BrandsList = await _context.Brands.ToListAsync();
             ViewBag.TotalOrdersCount = await _context.Orders.CountAsync();
+
             return View(new Product());
         }
 
-        // --- ОБЪЕДИНЕННЫЙ МЕТОД CREATE: СОХРАНЯЕТ БРЕНД, ТОВАР, IMGBB И ЗАМЕРЫ ---
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
-            [Bind("ProductID,Title,Price,ImageURL,AdditionalImages,Description,CategoryID,Sizes,Material,Color,CreatedAt,StockQuantity,ArticleNumber,Season,IsPublished,IsNew")] Product product,
-            string brandName, string brandCountry,
-            string SizeValueA, string SizeValueB, string SizeValueC,
-            int? StartX_A, int? StartY_A, int? EndX_A, int? EndY_A, int? TextX_A, int? TextY_A,
-            int? StartX_B, int? StartY_B, int? EndX_B, int? EndY_B, int? TextX_B, int? TextY_B,
-            int? StartX_C, int? StartY_C, int? EndX_C, int? EndY_C, int? TextX_C, int? TextY_C)
+    [Bind("ProductID,Title,Price,ImageURL,AdditionalImages,Description,CategoryID,Sizes,Material,Color,CreatedAt,StockQuantity,ArticleNumber,Season,IsPublished,IsNew,SizeValueA,SizeValueB,SizeValueC,StartX_A,StartY_A,EndX_A,EndY_A,TextX_A,TextY_A,StartX_B,StartY_B,EndX_B,EndY_B,TextX_B,TextY_B,StartX_C,StartY_C,EndX_C,EndY_C,TextX_C,TextY_C")] Product product,
+    string brandName, string brandCountry, // <-- ВЕРНУЛИ ЭТИ ПОЛЯ
+    string SizeValueA, string SizeValueB, string SizeValueC)
         {
             ModelState.Remove("Category");
             ModelState.Remove("Brand");
 
             if (ModelState.IsValid)
             {
-                // 1. Обработка бренда
+                // 1. ЛОГИКА БРЕНДА: Ищем существующий или создаем новый
                 if (!string.IsNullOrWhiteSpace(brandName))
                 {
                     var existingBrand = await _context.Brands
@@ -98,9 +99,9 @@ namespace VesnaStore.Controllers
                             BrandCountry = !string.IsNullOrWhiteSpace(brandCountry) ? brandCountry.Trim() : "Россия"
                         };
                         _context.Brands.Add(existingBrand);
-                        await _context.SaveChangesAsync();
+                        await _context.SaveChangesAsync(); // Сохраняем новый бренд в БД
                     }
-                    product.BrandID = existingBrand.BrandID;
+                    product.BrandID = existingBrand.BrandID; // Привязываем товар к бренду
                 }
 
                 // 2. Обработка Инфографики (ImgBB)
@@ -123,11 +124,11 @@ namespace VesnaStore.Controllers
                     }
                 }
 
-                // 3. Сохраняем товар (чтобы получить ProductID для замеров)
+                // 3. Сохраняем товар
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
 
-                // 4. Сохраняем текстовые замеры в таблицу
+                // 4. Сохраняем текстовые замеры
                 var sizeValue = new ProductSizeValue
                 {
                     ProductID = product.ProductID,
@@ -142,9 +143,46 @@ namespace VesnaStore.Controllers
                 return RedirectToAction(nameof(Create));
             }
 
-            ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Brands = await _context.Brands.ToListAsync();
+            ViewBag.Categories = new SelectList(await _context.Categories.ToListAsync(), "CategoryID", "Name");
+            ViewBag.BrandsList = await _context.Brands.ToListAsync();
             return View(product);
+        }
+
+        // НОВЫЙ МЕТОД ДЛЯ УДАЛЕНИЯ БРЕНДА ИЗ БД
+        [HttpPost]
+        public async Task<IActionResult> DeleteBrand(string brandName)
+        {
+            if (string.IsNullOrWhiteSpace(brandName))
+                return Json(new { success = false, message = "Пустое имя." });
+
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.BrandName.ToLower() == brandName.Trim().ToLower());
+
+            if (brand != null)
+            {
+                // Проверяем, есть ли товары с этим брендом
+                bool hasProducts = await _context.Products.AnyAsync(p => p.BrandID == brand.BrandID);
+                if (hasProducts)
+                    return Json(new { success = false, message = "Нельзя удалить бренд, так как к нему привязаны товары!" });
+
+                _context.Brands.Remove(brand);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+
+            return Json(new { success = false, message = "Бренд не найден в БД." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteBrand(int id)
+        {
+            var brand = await _context.Brands.FindAsync(id);
+            if (brand != null)
+            {
+                _context.Brands.Remove(brand);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            return Json(new { success = false });
         }
 
         [HttpGet]
@@ -157,7 +195,7 @@ namespace VesnaStore.Controllers
             if (product == null) return NotFound();
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Brands = await _context.Brands.ToListAsync();
+            ViewBag.BrandsList = await _context.Brands.ToListAsync(); // Заменил на BrandsList
             ViewBag.TotalOrdersCount = await _context.Orders.CountAsync();
             return View(product);
         }
@@ -189,7 +227,7 @@ namespace VesnaStore.Controllers
                     }
                 }
 
-                // 2. Обработка Бренда
+                // 2. Обработка Бренда (как в Create: ищем существующий или создаем новый)
                 if (!string.IsNullOrWhiteSpace(brandName))
                 {
                     var existingBrand = await _context.Brands
@@ -214,7 +252,7 @@ namespace VesnaStore.Controllers
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Brands = await _context.Brands.ToListAsync();
+            ViewBag.BrandsList = await _context.Brands.ToListAsync(); // Возвращаем список при ошибке
             return View(product);
         }
 

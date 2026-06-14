@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Подтверждение входа";
+}
+<div class="auth-page">
+    <div class="auth-card">
+        <h2>Подтверждение</h2>
+        <p style="font-size:0.85rem; color:#666; text-align:center; margin-bottom:20px;">На вашу почту отправлен одноразовый 6-значный код подтверждения.</p>
+
+        @if (TempData["Error"] != null)
+        {
+            <div style="color:red; font-size:0.85rem; margin-bottom:15px; text-align:center;">@TempData["Error"]</div>
+        }
+
+        <form asp-action="VerifyLoginCode" method="post">
+            @Html.AntiForgeryToken()
+            <div class="auth-form-group">
+                <label>Код из письма</label>
+                <input name="code" type="text" class="auth-input" placeholder="000000" maxlength="6" required style="text-align:center; letter-spacing: 5px; font-size: 1.2rem;" />
+            </div>
+            <button type="submit" class="btn-auth">Подтвердить</button>
+        </form>
+    </div>
+</div>

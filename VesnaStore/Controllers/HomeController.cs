@@ -72,7 +72,7 @@ namespace VesnaStore.Controllers
         }
 
         // --- КАТАЛОГ С ФИЛЬТРАМИ ---
-        public async Task<IActionResult> Catalog(int? categoryId, string size, string brand, string search, string sort)
+        public async Task<IActionResult> Catalog(int? categoryId, string size, string brand, string search, string sort, decimal? minPrice, decimal? maxPrice)
         {
             var query = _context.Products
                 .Include(p => p.Category)
@@ -88,15 +88,15 @@ namespace VesnaStore.Controllers
                 var sizeVariants = new List<string> { upperSize };
 
                 var sizeGroups = new List<string[]>
-                {
-                    new[] { "XS", "40", "34" },
-                    new[] { "S", "42", "36" },
-                    new[] { "M", "44", "38" },
-                    new[] { "L", "46", "40" },
-                    new[] { "XL", "48", "42" },
-                    new[] { "XXL", "50", "44" },
-                    new[] { "XXXL", "52", "46" }
-                };
+        {
+            new[] { "XS", "40", "34" },
+            new[] { "S", "42", "36" },
+            new[] { "M", "44", "38" },
+            new[] { "L", "46", "40" },
+            new[] { "XL", "48", "42" },
+            new[] { "XXL", "50", "44" },
+            new[] { "XXXL", "52", "46" }
+        };
 
                 var matchedGroup = sizeGroups.FirstOrDefault(g => g.Contains(upperSize));
                 if (matchedGroup != null)
@@ -130,7 +130,18 @@ namespace VesnaStore.Controllers
                 query = query.Where(p => p.Title.Contains(cleanSearch) || p.ArticleNumber.Contains(cleanSearch));
             }
 
-            // 5. Сортировка
+            // 5. Фильтр по бюджету (Цена)
+            if (minPrice.HasValue)
+            {
+                query = query.Where(p => p.Price >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(p => p.Price <= maxPrice.Value);
+            }
+
+            // 6. Сортировка
             query = sort switch
             {
                 "price_asc" => query.OrderBy(p => p.Price),
