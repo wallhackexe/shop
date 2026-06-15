@@ -557,18 +557,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         detailsBtn.addEventListener('click', async function (e) {
             e.preventDefault();
 
-            // Защита от двойных кликов
             this.disabled = true;
             const productId = this.getAttribute('data-id');
             const originalText = this.innerText;
 
-            // Вызываем твою умную функцию корзины
             const data = await handleCartAction(`/Cart/Add?productId=${productId}`, productId, true);
 
             if (data.success || data.guest) {
                 updateCartVisuals(data.cartCount);
 
-                // Анимация успешного добавления
                 this.style.background = '#27ae60';
                 this.style.borderColor = '#27ae60';
                 this.innerHTML = '<i class="fa-solid fa-check"></i> ДОБАВЛЕНО';
@@ -580,7 +577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     this.disabled = false;
                 }, 1500);
             } else {
-                // Если лимит исчерпан
+
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
@@ -611,14 +608,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', (e) => {
         const card = e.target.closest('.product-card');
 
-        // Проверяем, что кликнули по карточке, но НЕ по кнопкам корзины (+/-)
         if (card && !e.target.closest('.cart-controls-wrapper') && !e.target.closest('.btn-add-cart')) {
             const modal = document.getElementById('v2-modal');
             const id = card.dataset.id;
 
-            // СЦЕНАРИЙ 1: ГЛАВНАЯ СТРАНИЦА (Модалка существует)
             if (modal) {
-                // Открываем предпросмотр только при клике на картинку или кнопку "Просмотр"
+
                 const isQuickViewClick = e.target.closest('.product-image-box') || e.target.closest('.btn-quick-view-v2') || e.target.closest('.btn-quick-view');
 
                 if (isQuickViewClick) {
@@ -629,12 +624,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('v2-desc').innerText = card.dataset.desc || "Описание скоро появится.";
                         document.getElementById('v2-cat').innerText = (card.dataset.cat || "").toUpperCase();
 
+                        const modalCartBtn = document.querySelector('.modal-add-to-cart-btn');
+                        if (modalCartBtn) {
+                            modalCartBtn.dataset.id = id;
+                        }
+
                         const linkEl = document.getElementById('v2-link');
                         if (linkEl) linkEl.href = `/Home/Details/${id}`;
 
                         const mainImg = card.querySelector('img') ? card.querySelector('img').src : "";
                         const addImgs = card.dataset.additional || "";
-                        // Берем все картинки, кроме последней (инфографики)
                         const allImages = [mainImg, ...addImgs.split(/[\n\r,]+/).filter(url => url.trim() !== "")];
                         allImages.pop();
 
@@ -665,10 +664,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             }
-            // СЦЕНАРИЙ 2: КАТАЛОГ (Модалки нет)
             else {
                 e.preventDefault();
-                // Любой клик по карточке просто переносит на страницу товара
                 if (id) {
                     window.location.href = `/Home/Details/${id}`;
                 }
@@ -685,11 +682,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeBtn = document.getElementById('v2-close');
     if (closeBtn) closeBtn.onclick = closeModal;
 
-    // Закрытие модалки по клику на фон
     document.addEventListener('click', (e) => {
         const modal = document.getElementById('v2-modal');
         if (modal && e.target === modal) closeModal();
     });
+
+    document.addEventListener('click', (e) => {
+        const modalBtn = e.target.closest('.modal-add-to-cart-btn');
+        if (modalBtn) {
+            e.preventDefault();
+            const id = modalBtn.dataset.id;
+
+            const originalCardBtn = document.querySelector(`.product-card[data-id="${id}"] .btn-add-cart`);
+
+            if (originalCardBtn) {
+                originalCardBtn.click();
+            }
+
+            modalBtn.style.backgroundColor = '#27ae60';
+            modalBtn.style.color = '#fff';
+            modalBtn.style.pointerEvents = 'none';
+
+            const isAuth = document.querySelector('a[href="/Account/Logout"]');
+
+            if (isAuth) {
+                modalBtn.innerText = 'В КОРЗИНЕ (перейдите в корзину чтобы менять количество)';
+            } else {
+                modalBtn.innerText = 'В КОРЗИНЕ (зайдите в профиль чтобы менять количество)';
+            }
+        }
+    });
+    // ----------------------------------------------------------
 
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
