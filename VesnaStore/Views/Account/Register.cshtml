@@ -28,7 +28,7 @@
                 <span asp-validation-for="ConfirmPassword" style="color:red; font-size:0.7rem;"></span>
             </div>
             <div class="auth-form-group" style="display: flex; gap: 10px; align-items: flex-start; margin-top: 20px; text-align: left;">
-                <input asp-for="AcceptTerms" type="checkbox" id="consent-check" style="margin-top: 4px; cursor: pointer;" />
+                <input asp-for="AcceptTerms" type="checkbox" id="consent-check" style="margin-top: 4px; cursor: pointer;" required />
                 <label for="consent-check" style="font-size: 0.7rem; color: #888; text-transform: none; letter-spacing: 0; line-height: 1.4; font-weight: 400; cursor: pointer;">
                     Я даю согласие на обработку
                     <a href="/Home/Privacy" target="_blank" style="color: var(--rose); text-decoration: underline;">персональных данных</a>,

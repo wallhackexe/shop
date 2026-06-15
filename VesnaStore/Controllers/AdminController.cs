@@ -63,7 +63,6 @@ namespace VesnaStore.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            // Используем SelectList, чтобы HTML-хелпер понимал, что показывать и что сохранять
             ViewBag.Categories = new SelectList(await _context.Categories.ToListAsync(), "CategoryID", "Name");
             ViewBag.Brands = new SelectList(await _context.Brands.ToListAsync(), "BrandID", "BrandName");
 
@@ -77,7 +76,7 @@ namespace VesnaStore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
     [Bind("ProductID,Title,Price,ImageURL,AdditionalImages,Description,CategoryID,Sizes,Material,Color,CreatedAt,StockQuantity,ArticleNumber,Season,IsPublished,IsNew,SizeValueA,SizeValueB,SizeValueC,StartX_A,StartY_A,EndX_A,EndY_A,TextX_A,TextY_A,StartX_B,StartY_B,EndX_B,EndY_B,TextX_B,TextY_B,StartX_C,StartY_C,EndX_C,EndY_C,TextX_C,TextY_C")] Product product,
-    string brandName, string brandCountry, // <-- ВЕРНУЛИ ЭТИ ПОЛЯ
+    string brandName, string brandCountry, 
     string SizeValueA, string SizeValueB, string SizeValueC)
         {
             ModelState.Remove("Category");
@@ -85,7 +84,6 @@ namespace VesnaStore.Controllers
 
             if (ModelState.IsValid)
             {
-                // 1. ЛОГИКА БРЕНДА: Ищем существующий или создаем новый
                 if (!string.IsNullOrWhiteSpace(brandName))
                 {
                     var existingBrand = await _context.Brands
@@ -99,9 +97,9 @@ namespace VesnaStore.Controllers
                             BrandCountry = !string.IsNullOrWhiteSpace(brandCountry) ? brandCountry.Trim() : "Россия"
                         };
                         _context.Brands.Add(existingBrand);
-                        await _context.SaveChangesAsync(); // Сохраняем новый бренд в БД
+                        await _context.SaveChangesAsync();
                     }
-                    product.BrandID = existingBrand.BrandID; // Привязываем товар к бренду
+                    product.BrandID = existingBrand.BrandID;
                 }
 
                 // 2. Обработка Инфографики (ImgBB)
@@ -148,7 +146,6 @@ namespace VesnaStore.Controllers
             return View(product);
         }
 
-        // НОВЫЙ МЕТОД ДЛЯ УДАЛЕНИЯ БРЕНДА ИЗ БД
         [HttpPost]
         public async Task<IActionResult> DeleteBrand(string brandName)
         {
@@ -195,7 +192,7 @@ namespace VesnaStore.Controllers
             if (product == null) return NotFound();
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.BrandsList = await _context.Brands.ToListAsync(); // Заменил на BrandsList
+            ViewBag.BrandsList = await _context.Brands.ToListAsync();
             ViewBag.TotalOrdersCount = await _context.Orders.CountAsync();
             return View(product);
         }
@@ -227,7 +224,6 @@ namespace VesnaStore.Controllers
                     }
                 }
 
-                // 2. Обработка Бренда (как в Create: ищем существующий или создаем новый)
                 if (!string.IsNullOrWhiteSpace(brandName))
                 {
                     var existingBrand = await _context.Brands
@@ -252,7 +248,7 @@ namespace VesnaStore.Controllers
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.BrandsList = await _context.Brands.ToListAsync(); // Возвращаем список при ошибке
+            ViewBag.BrandsList = await _context.Brands.ToListAsync(); 
             return View(product);
         }
 
@@ -543,7 +539,7 @@ namespace VesnaStore.Controllers
                     return doc.RootElement.GetProperty("data").GetProperty("url").GetString();
                 }
             }
-            catch { /* логгируем ошибку при необходимости */ }
+            catch {  }
             return null;
         }
     }

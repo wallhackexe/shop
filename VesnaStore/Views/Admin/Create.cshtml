@@ -5,7 +5,6 @@
 }
 
 <style>
-    /* Локальные стили только для интерактивного холста */
     .canvas-responsive-box {
         width: 100%;
         overflow-x: auto;
@@ -18,11 +17,10 @@
     }
 
     #sizeProductImage {
-        width: 100% !important; /* Принудительно растягиваем на весь контейнер */
+        width: 100% !important; 
         height: auto !important;
         display: block;
     }
-    /* Фикс для полей замеров на мобилке */
     @@media (max-width: 768px) {
         .size-inputs-mobile-fix {
             grid-template-columns: 1fr !important;
@@ -249,7 +247,6 @@
     let currentStep = 0;
     let drawnLines = [];
 
-    // При переключении на вкладку "Размеры" загружаем превью по URL
     document.querySelectorAll('.admin-tabs button').forEach(btn => {
         btn.addEventListener('click', function () {
             if (this.innerText.includes('РАЗМЕРЫ')) {
@@ -271,7 +268,6 @@
         });
     });
 
-    // Расчет процентных координат мыши или тач-события на холсте
     function getPercentCoords(e) {
         const rect = svgOverlay.getBoundingClientRect();
 
@@ -338,7 +334,6 @@
         if (Math.abs(currentX - startX) > Math.abs(currentY - startY)) currentY = startY;
         else currentX = startX;
 
-        // Игнорируем случайные микро-клики
         if (Math.abs(currentX - startX) < 1.5 && Math.abs(currentY - startY) < 1.5) {
             redrawSvg();
             return;
@@ -352,7 +347,6 @@
 
         drawnLines.push({ sX: startX, sY: startY, eX: currentX, eY: currentY, mX: midX, mY: midY, letter: currentLetter });
 
-        // Пересчет относительных процентов в абсолютные пиксели картинки для бэкенда
         const realWidth = sizeImg.naturalWidth || 800;
         const realHeight = sizeImg.naturalHeight || 600;
         const lowerL = currentLetter.toLowerCase();
@@ -374,12 +368,9 @@
         labelsContainer.innerHTML = '';
 
         drawnLines.forEach(line => {
-            // Линии всегда в процентах, это правильно
             const svgLine = `<line x1="${line.sX}%" y1="${line.sY}%" x2="${line.eX}%" y2="${line.eY}%" stroke="#DCAEAE" stroke-width="5" stroke-linecap="round" />`;
             svgLayer.insertAdjacentHTML('beforeend', svgLine);
 
-            // Чтобы подписи не прыгали, используем transform: translate(-50%, -50%)
-            // И убедись, что они привязаны к процентам (line.mX и line.mY у тебя уже в процентах)
             const text = `${line.letter}: ${document.getElementById('input-size-' + line.letter.toLowerCase()).value || '—'} см`;
 
             labelsContainer.insertAdjacentHTML('beforeend', `
@@ -419,7 +410,6 @@
         redrawSvg();
     }
 
-    // Дублирующий предохранитель при отправке формы для точной записи размеров
     document.getElementById('admin-create-form').addEventListener('submit', function (e) {
         const realWidth = sizeImg.naturalWidth || 800;
         const realHeight = sizeImg.naturalHeight || 600;
@@ -435,7 +425,6 @@
         });
     });
 
-    // Логика работы табов
     window.openTab = function (evt, tabId) {
         let i, tabcontent, tablinks;
         tabcontent = document.getElementsByClassName("tab-content");
@@ -482,7 +471,7 @@
         }
 
         if (confirm(`Вы уверены, что хотите удалить бренд "${brandName}" из БД?`)) {
-            // Достаем токен для защиты POST запроса
+
             const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
             fetch('/Admin/DeleteBrand?brandName=' + encodeURIComponent(brandName), {
@@ -497,7 +486,7 @@
                         alert("Бренд удален!");
                         document.getElementById('brandNameInput').value = '';
                         document.getElementById('brandCountryInput').value = '';
-                        location.reload(); // Перезагружаем страницу, чтобы обновить datalist
+                        location.reload();
                     } else {
                         alert("Ошибка: " + data.message);
                     }

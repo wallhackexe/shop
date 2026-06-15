@@ -221,7 +221,6 @@
         font-size: 1rem;
     }
 
-    /* Заказы */
     .orders-stack-mobile {
         display: flex;
         flex-direction: column;
@@ -735,9 +734,16 @@
                             <button class="s-edit-btn" onclick="profileToggleEdit('email-form')">ИЗМЕНИТЬ</button>
                         </div>
                         <div id="email-form" class="s-edit-form">
-                            <input type="email" id="input-email" placeholder="Новый Email" class="vesna-input-bold" />
-                            <input type="text" id="input-email-code" placeholder="Код подтверждения (123456)" class="vesna-input-bold" />
-                            <button class="btn-black-sm" onclick="profileSaveEmail()">ПОДТВЕРДИТЬ</button>
+                            <div id="email-step-1">
+                                <input type="email" id="input-email" placeholder="Введите новый Email" class="vesna-input-bold" />
+                                <button class="btn-black-sm" type="button" onclick="profileRequestEmailCode()">ПОЛУЧИТЬ КОД</button>
+                            </div>
+
+                            <div id="email-step-2" style="display: none; margin-top: 15px;">
+                                <p style="font-size: 0.75rem; color: #DCAEAE; font-weight: 800; margin-bottom: 10px;">Код отправлен на новый адрес!</p>
+                                <input type="text" id="input-email-code" placeholder="Код подтверждения (******)" maxlength="6" class="vesna-input-bold" style="text-align: center; letter-spacing: 5px;" />
+                                <button class="btn-black-sm" type="button" onclick="profileVerifyAndSaveEmail()">ПОДТВЕРДИТЬ И СОХРАНИТЬ</button>
+                            </div>
                         </div>
                     </div>
 
@@ -765,9 +771,8 @@
                             var reviewsCount = item.Reviews?.Count ?? 0;
                             var avgRating = item.Reviews != null && item.Reviews.Any() ? item.Reviews.Average(r => r.Rating) : 5.0;
 
-                            @* ПРОВЕРКА НА СКРЫТОСТЬ *@
-                            @* Замени на item.IsHidden, если используешь это свойство *@
-                            bool isUnavailable = item.StockQuantity <= 0;
+                            @* ПРОВЕРКА НА СКРЫТОСТЬ: Товар недоступен, если IsPublished == false *@
+                            bool isUnavailable = !item.IsPublished;
 
                             <div class="product-card" data-id="@item.ProductID" style="@(isUnavailable ? "opacity: 0.65; filter: grayscale(80%);" : "")">
                                 <div class="product-image-box">
@@ -945,10 +950,8 @@
 </div>
 
 <script>
-    // Вспомогательная функция для получения CSRF токена
     const getProfileCsrfToken = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-    // 1. Обработка клика на кнопку "Отзыв" (Выбор товара)
     window.profileHandleReview = function (button) {
         const rawData = button.getAttribute('data-products');
         const products = JSON.parse(rawData);
@@ -983,7 +986,6 @@
         }
     };
 
-    // 2. Открытие окна отправки отзыва (С ПОЭТАПНОЙ ЗАГРУЗКОЙ ЧЕРЕЗ ТВОЙ PROXYUPLOAD)
     window.profileOpenReviewModal = function (productId, productName, productImg) {
         window.currentRating = 5;
 
@@ -1039,9 +1041,8 @@
                 const fileInput = document.getElementById('rev-image').files[0];
                 let finalImageUrl = null;
 
-                // ЭТАП 1: Если прикреплено фото, сначала прогоняем через твой локальный ProxyUpload
                 if (fileInput) {
-                    Swal.showLoading(); // Включаем спиннер, пока идет выгрузка
+                    Swal.showLoading();
                     const uploaderData = new FormData();
                     uploaderData.append('image', fileInput);
 
@@ -1057,7 +1058,7 @@
                         const uploadResult = await uploadResponse.json();
 
                         if (uploadResult.success && uploadResult.data && uploadResult.data.url) {
-                            finalImageUrl = uploadResult.data.url; // Достаем готовую i.ibb.co ссылку!
+                            finalImageUrl = uploadResult.data.url; 
                         } else {
                             throw new Error(uploadResult.message || 'Облако ImgBB отклонило изображение');
                         }
@@ -1067,8 +1068,6 @@
                     }
                 }
 
-                // ЭТАП 2: Отправляем готовые текстовые данные на бэкенд отзывов
-                // Теперь мы передаем строку imageUrl, бэкенд примет её без IFormFile!
                 const token = getProfileCsrfToken();
                 const reviewParams = new URLSearchParams();
                 reviewParams.append('productId', productId);
@@ -1107,16 +1106,15 @@
         });
     };
 
-    // 3. Переключение табов личного кабинета
     window.profileOpenTab = function (btn, tabId) {
         document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
         btn.classList.add('active');
         const target = document.getElementById(tabId);
         if (target) target.classList.add('active');
     };
 
-    // 4. Логика форм редактирования данных профиля
     window.profileToggleEdit = function (formId) {
         const form = document.getElementById(formId);
         if (form) form.style.display = form.style.display === 'block' ? 'none' : 'block';
@@ -1129,15 +1127,88 @@
                 if (data.success) { document.getElementById('display-name').innerText = name; profileToggleEdit('name-form'); }
             });
     };
+    window.profileRequestEmailCode = function () {
+        const newEmail = document.getElementById('input-email').value.trim();
+        if (!newEmail) {
+            Swal.fire({ icon: 'warning', title: 'ОЙ...', text: 'Введите новый Email', customClass: { popup: 'vesna-popup', confirmButton: 'profile-cancel-btn' }, buttonsStyling: false });
+            return;
+        }
 
-    window.profileSaveEmail = function () {
-        const email = document.getElementById('input-email').value;
-        const code = document.getElementById('input-email-code').value;
-        fetch(`/User/ChangeEmail?newEmail=${email}&code=${code}`, { method: 'POST' })
-            .then(res => res.json()).then(data => {
-                if (data.success) { document.getElementById('display-email').innerText = email; profileToggleEdit('email-form'); }
+        const btn = document.querySelector('#email-step-1 button');
+        btn.innerText = 'ОТПРАВКА...';
+        btn.disabled = true;
+
+        const token = getProfileCsrfToken();
+
+        fetch(`/User/RequestEmailChangeCode?newEmail=${encodeURIComponent(newEmail)}`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token }
+        })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerText = 'ПОЛУЧИТЬ КОД';
+                btn.disabled = false;
+
+                if (data.success) {
+                    document.getElementById('email-step-1').style.display = 'none';
+                    document.getElementById('email-step-2').style.display = 'block';
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ОШИБКА', text: data.message || 'Ошибка отправки', customClass: { popup: 'vesna-popup', confirmButton: 'profile-cancel-btn' }, buttonsStyling: false });
+                }
+            })
+            .catch(err => {
+                btn.innerText = 'ПОЛУЧИТЬ КОД';
+                btn.disabled = false;
+                console.error(err);
             });
     };
+
+
+    window.profileVerifyAndSaveEmail = function () {
+        const code = document.getElementById('input-email-code').value.trim();
+        if (!code) {
+            Swal.fire({ icon: 'warning', title: 'ОЙ...', text: 'Введите код подтверждения', customClass: { popup: 'vesna-popup', confirmButton: 'profile-cancel-btn' }, buttonsStyling: false });
+            return;
+        }
+
+        const btn = document.querySelector('#email-step-2 button');
+        btn.innerText = 'ПРОВЕРКА...';
+        btn.disabled = true;
+
+        const token = getProfileCsrfToken();
+
+        fetch(`/User/VerifyAndSaveEmail?code=${encodeURIComponent(code)}`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': token }
+        })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerText = 'ПОДТВЕРДИТЬ И СОХРАНИТЬ';
+                btn.disabled = false;
+
+                if (data.success) {
+
+                    document.getElementById('display-email').innerText = data.newEmail;
+                    profileToggleEdit('email-form');
+
+
+                    document.getElementById('input-email').value = '';
+                    document.getElementById('input-email-code').value = '';
+                    document.getElementById('email-step-1').style.display = 'block';
+                    document.getElementById('email-step-2').style.display = 'none';
+
+                    Swal.fire({ icon: 'success', title: 'УСПЕШНО', text: 'Email изменен!', timer: 2000, showConfirmButton: false, customClass: { popup: 'vesna-popup' } });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ОШИБКА', text: data.message || 'Неверный код', customClass: { popup: 'vesna-popup', confirmButton: 'profile-cancel-btn' }, buttonsStyling: false });
+                }
+            })
+            .catch(err => {
+                btn.innerText = 'ПОДТВЕРДИТЬ И СОХРАНИТЬ';
+                btn.disabled = false;
+                console.error(err);
+            });
+    };
+
 
     window.profileSavePassword = function () {
         const oldP = document.getElementById('old-pass').value;
@@ -1148,7 +1219,7 @@
                 if (data.success) { profileToggleEdit('pass-form'); Swal.fire('Успех', 'Пароль изменен', 'success'); }
             });
     };
-    // 5. Окно предупреждения для скрытых товаров в избранном
+
     window.showUnavailableAlert = function () {
         if (typeof Swal !== 'undefined') {
             Swal.fire({

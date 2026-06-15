@@ -4,7 +4,6 @@
     ViewData["Title"] = Model.Title + " — VESNA";
     Layout = "_Layout";
 
-    // ПРОВЕРКА ЛАЙКА ИЗБРАННОГО
     var userFavs = ViewBag.UserFavorites as List<int> ?? new List<int>();
     bool isMainLiked = userFavs.Contains(Model.ProductID);
 
@@ -48,7 +47,6 @@
 }
 
 <style>
-    /* ФИКС ВЕРСТКИ СЛАЙДЕРА */
     #detailsStrip {
         display: flex !important;
         transition: transform 0.5s ease;
@@ -62,7 +60,6 @@
         overflow: hidden;
     }
 
-    /* Отключаем зум только для инфографики замеров */
     #infoWrapper img {
         width: 100%;
         display: block;
@@ -217,7 +214,6 @@
                             </div>
                         </div>
 
-                        @* ИСПРАВЛЕНО: Обращаемся к новому свойству ReviewImageUrl *@
                         @if (!string.IsNullOrEmpty(rev.ReviewImageUrl))
                         {
                             <div class="rev-image" style="margin-bottom: 15px;">
@@ -249,13 +245,11 @@
                 {
                     bool itemLiked = userFavs.Contains(item.ProductID);
 
-                    @* ПОВЕСИЛИ КЛИК НА САМУ КАРТОЧКУ (100% переход) *@
                     <div class="product-card"
                          style="position: relative; width: 100%; max-width: 250px; cursor: pointer; transition: transform 0.2s ease;"
                          onclick="window.location.href='/Home/Details/@item.ProductID'">
 
                         @* КНОПКА ЛАЙКА *@
-                        @* event.stopPropagation() не дает клику по сердцу вызвать клик по карточке *@
                         <button class="wishlist-heart @(itemLiked ? "active" : "")"
                                 onclick="event.stopPropagation(); toggleLike(@item.ProductID, this);"
                                 style="position: absolute; top: 12px; right: 12px; z-index: 10; border: none; background: rgba(255,255,255,0.7); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.1);">

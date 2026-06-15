@@ -143,12 +143,10 @@
             const data = await response.json();
 
             if (data.success) {
-                // UI состояние
                 document.getElementById('promo-input-area').style.display = 'none';
                 document.getElementById('promo-applied-area').style.display = 'flex';
                 document.getElementById('discount-amount').innerText = data.discount.toLocaleString('ru-RU');
 
-                // Пересчет суммы
                 const newTotal = originalTotal - data.discount;
                 document.getElementById('cartTotal').innerText = newTotal.toLocaleString('ru-RU');
 

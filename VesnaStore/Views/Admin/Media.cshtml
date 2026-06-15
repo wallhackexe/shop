@@ -62,7 +62,7 @@
 </div>
 <script>
     async function deleteMedia(id, event) {
-        event.stopPropagation(); // Важно: предотвращает копирование при удалении
+        event.stopPropagation();
 
         if (!confirm('Удалить это фото?')) return;
 
@@ -76,9 +76,7 @@
         }
     }
 
-    // Универсальная функция копирования
     function copyToClipboard(text) {
-        // Проверяем, есть ли поддержка современного API
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(() => {
                 showToast("Ссылка скопирована!");
@@ -86,7 +84,6 @@
                 console.error('Ошибка копирования: ', err);
             });
         } else {
-            // "Дедовский" метод для старых браузеров или отсутствия HTTPS
             let textArea = document.createElement("textarea");
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -98,6 +95,6 @@
     }
 
     function showToast(msg) {
-        alert(msg); // Можно заменить на красивое всплывающее окно
+        alert(msg);
     }
 </script>

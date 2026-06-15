@@ -33,26 +33,22 @@ namespace VesnaStore.Controllers
 
             var userId = int.Parse(userIdString);
 
-            // Подгружаем товары вместе с данными о самом продукте
             var cartItems = await _context.CartItems
                 .Include(c => c.Product)
                 .Where(c => c.UserID == userId)
                 .ToListAsync();
 
-            // Ищем "пропавшие" товары (удаленные физически, снятые с публикации или с 0 остатком)
             var invalidItems = cartItems
                 .Where(c => c.Product == null || !c.Product.IsPublished || c.Product.StockQuantity <= 0)
                 .ToList();
 
             if (invalidItems.Any())
             {
-                // Удаляем их из базы данных корзины
                 _context.CartItems.RemoveRange(invalidItems);
                 await _context.SaveChangesAsync();
 
                 TempData["Error"] = "Некоторые товары были удалены из корзины, так как они закончились или сняты с продажи.";
 
-                // Убираем их из списка для отображения на странице
                 cartItems = cartItems.Except(invalidItems).ToList();
             }
 
@@ -260,7 +256,6 @@ namespace VesnaStore.Controllers
 
             if (!cartItems.Any()) return RedirectToAction("Index");
 
-            // Финальная проверка остатков перед списанием
             foreach (var item in cartItems)
             {
                 if (item.Quantity > item.Product.StockQuantity)
@@ -282,9 +277,8 @@ namespace VesnaStore.Controllers
             };
 
             _context.Orders.Add(order);
-            await _context.SaveChangesAsync(); // Сохраняем заказ, чтобы получить OrderID
+            await _context.SaveChangesAsync(); 
 
-            // Переносим товары из корзины в детали заказа и списываем со склада
             foreach (var item in cartItems)
             {
                 _context.OrderItems.Add(new OrderItem
@@ -298,7 +292,7 @@ namespace VesnaStore.Controllers
                 item.Product.StockQuantity -= item.Quantity;
             }
 
-            // Очищаем корзину
+
             _context.CartItems.RemoveRange(cartItems);
             await _context.SaveChangesAsync();
 

@@ -429,7 +429,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     cart.push(id);
                     localStorage.setItem('guest_cart', JSON.stringify(cart));
                 } else {
-                    // Если гость пытается добавить то, что уже есть, а я не храню кол-во в localStorage
                     return { success: false, message: "Товар уже в корзине. Войдите, чтобы менять количество." };
                 }
             }
@@ -488,7 +487,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }, 500);
                 }
             } else {
-                // УВЕДОМЛЕНИЕ О ЛИМИТЕ (SweetAlert)
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'info',

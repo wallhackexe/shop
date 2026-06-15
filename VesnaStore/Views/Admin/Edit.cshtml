@@ -5,7 +5,6 @@
 }
 
 <style>
-    /* Локальные стили только для интерактивного холста */
     .canvas-responsive-box {
         width: 100%;
         overflow-x: auto;
@@ -18,11 +17,10 @@
     }
 
     #sizeProductImage {
-        width: 100% !important; /* Принудительно растягиваем на весь контейнер */
+        width: 100% !important;
         height: auto !important;
         display: block;
     }
-    /* Фикс для полей замеров на мобилке */
     @@media (max-width: 768px) {
         .size-inputs-mobile-fix {
             grid-template-columns: 1fr !important;
@@ -269,12 +267,12 @@
     let startX = 0, startY = 0;
     let currentStep = 0;
     let drawnLines = [];
-    let isLinesLoaded = false; // ФЛАГ: предотвращает перезапись массива при повторном onload картинки
+    let isLinesLoaded = false; 
 
-    // Первичная подгрузка чертежей при загрузке страницы
+
     loadExistingLines();
 
-    // Переключение вкладок через делегирование кнопок (дополнительный триггер к openTab)
+
     document.querySelectorAll('.admin-tabs button').forEach(btn => {
         btn.addEventListener('click', function () {
             if (this.innerText.includes('РАЗМЕРЫ')) {
@@ -296,7 +294,6 @@
         });
     });
 
-    // Обработка асинхронной загрузки файлов на сервер / Cloudinary
     if (cloudUploader) {
         cloudUploader.addEventListener('change', async function () {
             if (!this.files || this.files.length === 0) return;
@@ -305,7 +302,6 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            // Получаем токен верификации формы для безопасности ASP.NET Core
             const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
             const token = tokenElement ? tokenElement.value : '';
 
@@ -325,7 +321,6 @@
                         imgInput.value = data.url;
                         previewBlock.innerHTML = `<img src="${data.url}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px;" />`;
 
-                        // Если картинка поменялась, сбрасываем старую разметку, так как она не актуальна для нового фото
                         sizeImg.src = data.url;
                         resetDrawing();
 
@@ -347,13 +342,11 @@
         });
     }
 
-    // Восстановление сохраненных координат
     function loadExistingLines() {
         sizeImg.onload = function () {
             const realWidth = sizeImg.naturalWidth || 800;
             const realHeight = sizeImg.naturalHeight || 600;
 
-            // Загружаем из базы только ОДИН раз при открытии, чтобы не перезатирать изменения админа
             if (!isLinesLoaded) {
                 const linesData = [
                     { sX: @(Model.StartX_A ?? 0), sY: @(Model.StartY_A ?? 0), eX: @(Model.EndX_A ?? 0), eY: @(Model.EndY_A ?? 0), mX: @(Model.TextX_A ?? 0), mY: @(Model.TextY_A ?? 0), letter: 'A' },
@@ -389,7 +382,6 @@
         }
     }
 
-    // Расчет процентных координат клика
     function getPercentCoords(e) {
         const rect = svgOverlay.getBoundingClientRect();
         let clientX, clientY;
@@ -489,12 +481,9 @@
         labelsContainer.innerHTML = '';
 
         drawnLines.forEach(line => {
-            // Линии всегда в процентах, это правильно
             const svgLine = `<line x1="${line.sX}%" y1="${line.sY}%" x2="${line.eX}%" y2="${line.eY}%" stroke="#DCAEAE" stroke-width="5" stroke-linecap="round" />`;
             svgLayer.insertAdjacentHTML('beforeend', svgLine);
 
-            // Чтобы подписи не прыгали, используем transform: translate(-50%, -50%)
-            // И убедись, что они привязаны к процентам (line.mX и line.mY у тебя уже в процентах)
             const text = `${line.letter}: ${document.getElementById('input-size-' + line.letter.toLowerCase()).value || '—'} см`;
 
             labelsContainer.insertAdjacentHTML('beforeend', `
@@ -534,7 +523,6 @@
         redrawSvg();
     }
 
-    // Финальная валидация и перезапись скрытых полей перед отправкой на сервер
     document.getElementById('admin-edit-form').addEventListener('submit', function (e) {
         const realWidth = sizeImg.naturalWidth || 800;
         const realHeight = sizeImg.naturalHeight || 600;
@@ -612,7 +600,7 @@
                         alert("Бренд удален!");
                         document.getElementById('brandNameInput').value = '';
                         document.getElementById('brandCountryInput').value = '';
-                        location.reload(); // Перезагружаем страницу, чтобы обновить datalist
+                        location.reload();
                     } else {
                         alert("Ошибка: " + data.message);
                     }

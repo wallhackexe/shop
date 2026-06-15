@@ -102,7 +102,6 @@
 </div>
 
 <script>
-    // Функция для просмотра фото отзыва в полный размер
     function viewFullReviewImage(imgUrl, productTitle) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -127,7 +126,6 @@
         const row = document.getElementById(`review-row-${reviewId}`);
         const statusCell = document.getElementById(`status-cell-${reviewId}`);
 
-        // Упаковываем токен в FormData
         const formData = new FormData();
         if (token) {
             formData.append('__RequestVerificationToken', token);

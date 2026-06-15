@@ -23,8 +23,6 @@ namespace VesnaStore.Controllers
             _context = context;
             _configuration = configuration;
         }
-
-        // --- 1. ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
         public async Task<IActionResult> Profile()
         {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -33,13 +31,11 @@ namespace VesnaStore.Controllers
 
             int userId = int.Parse(userIdStr);
 
-            // Загружаем уведомления
             ViewBag.Notifications = await _context.UserNotifications
                 .Where(n => n.UserID == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
-            // Загружаем данные пользователя вместе с историей заказов
             var user = await _context.Users
                 .Include(u => u.Orders)
                     .ThenInclude(o => o.OrderItems)
@@ -49,7 +45,6 @@ namespace VesnaStore.Controllers
             if (user == null)
                 return NotFound();
 
-            // Загружаем избранные товары
             var favorites = await _context.Favorites
                 .Where(f => f.UserID == userId)
                 .Include(f => f.Product).ThenInclude(p => p.Reviews)
@@ -98,13 +93,43 @@ namespace VesnaStore.Controllers
             return Json(new { success = true, message = "Пароль изменен" });
         }
 
-        // --- 4. СМЕНА EMAIL (Восстановлено из декомпилята) ---
+        // --- 4. СМЕНА EMAIL  ---
+        private async Task SendEmailAsync(string toEmail, string subject, string body)
+        {
+            try
+            {
+                using (var message = new System.Net.Mail.MailMessage())
+                {
+                    message.To.Add(new System.Net.Mail.MailAddress(toEmail));
+                    message.From = new System.Net.Mail.MailAddress("fogetw@gmail.com", "VESNA Store");
+                    message.Subject = subject;
+                    message.Body = body;
+                    message.IsBodyHtml = true;
+
+                    using (var client = new System.Net.Mail.SmtpClient("smtp.gmail.com"))
+                    {
+                        client.Port = 587; 
+                        client.Credentials = new System.Net.NetworkCredential("fogetw@gmail.com", "bdsdrcwoguatkecs");
+                        client.EnableSsl = true;
+                        await client.SendMailAsync(message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Критическая ошибка отправки почты: {ex.Message}");
+            }
+        }
         [HttpPost]
         public async Task<IActionResult> ChangeEmail(string newEmail, string code)
         {
-            // В декомпилированной версии стояла жесткая заглушка на код "123456"
-            if (code != "123456")
-                return Json(new { success = false, message = "Неверный код подтверждения" });
+            string sessionCode = HttpContext.Session.GetString("EmailChangeCode");
+            string sessionEmail = HttpContext.Session.GetString("NewEmailCandidate");
+
+            if (string.IsNullOrEmpty(sessionCode) || sessionCode != code?.Trim() || sessionEmail != newEmail?.Trim())
+            {
+                return Json(new { success = false, message = "Неверный код подтверждения или Email" });
+            }
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var user = await _context.Users.FindAsync(userId);
@@ -113,9 +138,27 @@ namespace VesnaStore.Controllers
             {
                 user.Email = newEmail;
                 await _context.SaveChangesAsync();
+
+                HttpContext.Session.Remove("EmailChangeCode");
+                HttpContext.Session.Remove("NewEmailCandidate");
             }
 
-            return Json(new { success = true, message = "Email успешно изменен" });
+            return Json(new { success = true, newEmail = newEmail, message = "Email успешно изменен" });
+        }
+        [HttpPost]
+        public async Task<IActionResult> RequestEmailChangeCode(string newEmail)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == newEmail))
+                return Json(new { success = false, message = "Этот email уже занят." });
+
+            string code = new Random().Next(100000, 999999).ToString();
+
+            HttpContext.Session.SetString("EmailChangeCode", code);
+            HttpContext.Session.SetString("NewEmailCandidate", newEmail);
+
+            await SendEmailAsync(newEmail, "Подтверждение смены почты", $"Ваш код подтверждения: <b>{code}</b>");
+
+            return Json(new { success = true });
         }
 
         // --- 5. ОТПРАВКА ОТЗЫВА ---
@@ -139,7 +182,7 @@ namespace VesnaStore.Controllers
                 UserName = user?.FullName ?? "Аноним",
                 Comment = comment.Trim(),
                 Rating = rating,
-                IsApproved = true, // В оригинале отзывы одобряются автоматически
+                IsApproved = true,
                 CreatedAt = DateTime.Now,
                 ReviewImageUrl = imageUrl
             };
@@ -152,7 +195,6 @@ namespace VesnaStore.Controllers
             }
             catch (Exception ex)
             {
-                // Запись ошибки в консоль, как в оригинале
                 Console.WriteLine("[Review DB Error]: " + ex.Message);
                 return Json(new { success = false, message = "Ошибка при сохранении отзыва в базу данных." });
             }

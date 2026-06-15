@@ -30,30 +30,25 @@ namespace VesnaStore.Controllers
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 return RedirectToAction("Login");
 
-            // Загружаем пользователя
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
             if (user == null) return RedirectToAction("Login");
 
-            // Получаем список ID избранных товаров
             var favoriteIds = await _context.Favorites
                 .Where(f => f.UserID == userId)
                 .Select(f => f.ProductID)
                 .ToListAsync();
 
-            // Загружаем сами товары из избранного с категориями и отзывами
             var favoriteProducts = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Reviews)
                 .Where(p => favoriteIds.Contains(p.ProductID))
                 .ToListAsync();
 
-            // Загружаем историю заказов
             var orders = await _context.Orders
                 .Where(o => o.UserID == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
 
-            // Передаем всё в ViewBag без декомпилированного мусора CallSite
             ViewBag.Favorites = favoriteProducts;
             ViewBag.Orders = orders;
             ViewBag.FavoriteIds = favoriteIds;
@@ -73,20 +68,26 @@ namespace VesnaStore.Controllers
                 ModelState.AddModelError("", "Этот email уже зарегистрирован");
                 return View();
             }
+            Random rand = new Random();
+            string verificationCode = rand.Next(100000, 999999).ToString();
 
-            var user = new User
+            HttpContext.Session.SetString("RegVerificationCode", verificationCode);
+            HttpContext.Session.SetString("RegEmail", email);
+            HttpContext.Session.SetString("RegPassword", password);
+            HttpContext.Session.SetString("RegFullName", fullName);
+
+            try
             {
-                Email = email,
-                PasswordHash = password,
-                FullName = fullName,
-                UserRole = "User"
-            };
+                await SendEmailAsync(email, "Подтверждение регистрации — VESNA", $"Ваш код подтверждения регистрации: <b>{verificationCode}</b>");
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = "Регистрация прошла успешно! Теперь вы можете войти.";
-            return RedirectToAction("Login");
+                TempData["Success"] = "Код подтверждения отправлен на вашу почту.";
+                return RedirectToAction("VerifyRegistrationCode");
+            }
+            catch (Exception)
+            {
+                ModelState.AddModelError("", "Ошибка при отправке письма. Проверьте адрес почты.");
+                return View();
+            }
         }
 
         // --- СИНХРОНИЗАЦИЯ КОРЗИНЫ ---
@@ -182,16 +183,13 @@ namespace VesnaStore.Controllers
             {
                 HttpContext.Session.Remove("LoginAttempts");
 
-                // Генерация случайного 6-значного кода подтверждения
                 Random rand = new Random();
                 string verificationCode = rand.Next(100000, 999999).ToString();
 
-                // Сохраняем временные данные в сессию
                 HttpContext.Session.SetString("LoginVerificationCode", verificationCode);
                 HttpContext.Session.SetInt32("PendingUserId", user.UserID);
                 HttpContext.Session.SetString("PendingReturnUrl", returnUrl ?? "");
 
-                // Отправка кода на email пользователя
                 await SendEmailAsync(user.Email, "Код подтверждения входа — VESNA", $"Ваш одноразовый код для входа: <b>{verificationCode}</b>");
 
                 return RedirectToAction("VerifyLoginCode");
@@ -214,7 +212,6 @@ namespace VesnaStore.Controllers
             return View();
         }
 
-        // Страница ввода кода подтверждения при входе
         [HttpGet]
         public IActionResult VerifyLoginCode() => View();
 
@@ -243,7 +240,6 @@ namespace VesnaStore.Controllers
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-                    // Очистка сессии от временных данных аутентификации
                     HttpContext.Session.Remove("LoginVerificationCode");
                     HttpContext.Session.Remove("PendingUserId");
 
@@ -330,11 +326,10 @@ namespace VesnaStore.Controllers
 
             if (user != null && !string.IsNullOrWhiteSpace(newPassword))
             {
-                user.PasswordHash = newPassword; // Запись нового пароля
+                user.PasswordHash = newPassword; 
                 _context.Update(user);
                 await _context.SaveChangesAsync();
 
-                // Полная очистка данных сессии сброса
                 HttpContext.Session.Remove("PasswordResetCode");
                 HttpContext.Session.Remove("PasswordResetEmail");
                 HttpContext.Session.Remove("PasswordResetVerified");
@@ -373,6 +368,41 @@ namespace VesnaStore.Controllers
             {
                 System.Diagnostics.Debug.WriteLine($"Критическая ошибка отправки почты: {ex.Message}");
             }
+        }
+        [HttpGet]
+        public IActionResult VerifyRegistrationCode() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyRegistrationCode(string code)
+        {
+            string sessionCode = HttpContext.Session.GetString("RegVerificationCode");
+
+            if (!string.IsNullOrEmpty(sessionCode) && sessionCode == code?.Trim())
+            {
+                var user = new User
+                {
+                    Email = HttpContext.Session.GetString("RegEmail"),
+                    PasswordHash = HttpContext.Session.GetString("RegPassword"),
+                    FullName = HttpContext.Session.GetString("RegFullName"),
+                    UserRole = "User"
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+
+                HttpContext.Session.Remove("RegVerificationCode");
+                HttpContext.Session.Remove("RegEmail");
+                HttpContext.Session.Remove("RegPassword");
+                HttpContext.Session.Remove("RegFullName");
+
+                TempData["Success"] = "Регистрация завершена! Теперь вы можете войти.";
+                return RedirectToAction("Login");
+            }
+
+            TempData["Error"] = "Неверный код подтверждения.";
+            return View();
         }
 
         // --- ВЫХОД (LOGOUT) ---

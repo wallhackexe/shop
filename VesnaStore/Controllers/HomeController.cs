@@ -30,10 +30,8 @@ namespace VesnaStore.Controllers
         // --- ГЛАВНАЯ СТРАНИЦА ---
         public async Task<IActionResult> Index()
         {
-            // Получаем список ID товаров в избранном у пользователя (если он авторизован)
             ViewBag.UserFavorites = await GetUserFavoriteIdsAsync();
 
-            // Загружаем 8 последних опубликованных новинок
             var products = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
@@ -49,7 +47,6 @@ namespace VesnaStore.Controllers
         // --- КАРТОЧКА ТОВАРA ---
         public async Task<IActionResult> Details(int id)
         {
-            // Загружаем товар и только одобренные модератором отзывы (Filtered Include)
             var product = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
@@ -59,7 +56,6 @@ namespace VesnaStore.Controllers
             if (product == null)
                 return NotFound();
 
-            // Похожие товары: из той же категории, в наличии, исключая текущий. Сортировка — рандом.
             ViewBag.RelatedProducts = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
@@ -81,7 +77,6 @@ namespace VesnaStore.Controllers
                 .Where(p => p.IsPublished)
                 .AsQueryable();
 
-            // 1. Фильтр по размеру (умное сопоставление сеток)
             if (!string.IsNullOrEmpty(size))
             {
                 string upperSize = size.Trim().ToUpper();
@@ -111,26 +106,22 @@ namespace VesnaStore.Controllers
                 query = query.Where(p => p.Sizes != null && sizeVariants.Any(v => p.Sizes.Contains(v)));
             }
 
-            // 2. Фильтр по категории
             if (categoryId.HasValue && categoryId.Value > 0)
             {
                 query = query.Where(p => p.CategoryID == categoryId.Value);
             }
 
-            // 3. Фильтр по бренду
             if (!string.IsNullOrEmpty(brand))
             {
                 query = query.Where(p => p.Brand.BrandName == brand);
             }
 
-            // 4. Поиск по названию или артикулу
             if (!string.IsNullOrEmpty(search))
             {
                 string cleanSearch = search.Trim();
                 query = query.Where(p => p.Title.Contains(cleanSearch) || p.ArticleNumber.Contains(cleanSearch));
             }
 
-            // 5. Фильтр по бюджету (Цена)
             if (minPrice.HasValue)
             {
                 query = query.Where(p => p.Price >= minPrice.Value);
@@ -141,7 +132,6 @@ namespace VesnaStore.Controllers
                 query = query.Where(p => p.Price <= maxPrice.Value);
             }
 
-            // 6. Сортировка
             query = sort switch
             {
                 "price_asc" => query.OrderBy(p => p.Price),
@@ -149,7 +139,6 @@ namespace VesnaStore.Controllers
                 _ => query.OrderByDescending(p => p.CreatedAt)
             };
 
-            // Данные для боковой панели / фильтров в представлении
             ViewBag.Categories = await _context.Categories.ToListAsync();
             ViewBag.UserFavorites = await GetUserFavoriteIdsAsync();
 
@@ -157,7 +146,6 @@ namespace VesnaStore.Controllers
             return View(products);
         }
 
-        // --- СТРАНИЦА ОШИБОК ---
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error(int? statusCode = null)
         {
@@ -170,7 +158,6 @@ namespace VesnaStore.Controllers
             });
         }
 
-        // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (DRY) ---
         private async Task<List<int>> GetUserFavoriteIdsAsync()
         {
             if (!User.Identity?.IsAuthenticated ?? true)
