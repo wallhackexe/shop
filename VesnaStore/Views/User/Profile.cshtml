@@ -880,18 +880,26 @@
 
                                     @if (order.Status == "Завершен")
                                     {
-                                        var productsData = order.OrderItems.Select(oi => new
+                                        // Достаем отзыв прямо здесь и сразу сохраняем рейтинг!
+                                        var itemsData = order.OrderItems.Select(oi =>
                                         {
-                                            id = oi.ProductID,
-                                            title = oi.Product?.Title ?? "Товар",
-                                            img = oi.Product?.ImageURL ?? ""
+                                            var userReview = oi.Product?.Reviews?.FirstOrDefault(r => r.UserID == Model.UserID);
+                                            return new
+                                            {
+                                                id = oi.ProductID,
+                                                title = oi.Product?.Title ?? "Товар",
+                                                img = oi.Product?.ImageURL ?? "",
+                                                hasReview = userReview != null,
+                                                rating = userReview != null ? userReview.Rating : 0
+                                            };
                                         });
-                                        var jsonProducts = System.Text.Json.JsonSerializer.Serialize(productsData);
+
+                                        var jsonProducts = System.Text.Json.JsonSerializer.Serialize(itemsData);
 
                                         <button class="profile-rev-btn"
                                                 data-products="@jsonProducts"
                                                 onclick="profileHandleReview(this)">
-                                            Отзыв
+                                            @(itemsData.Any(i => i.hasReview) ? "РЕДАКТИРОВАТЬ ОТЗЫВЫ" : "ОСТАВИТЬ ОТЗЫВ")
                                         </button>
                                     }
                                 </div>
@@ -952,68 +960,110 @@
 <script>
     const getProfileCsrfToken = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-    window.profileHandleReview = function (button) {
+    window.profileHandleReview = async function (button) {
         const rawData = button.getAttribute('data-products');
         const products = JSON.parse(rawData);
 
+        // Если товар всего один в заказе
         if (products.length === 1) {
-            profileOpenReviewModal(products[0].id, products[0].title, products[0].img);
+            Swal.showLoading();
+            let existingReview = null;
+            if (products[0].hasReview) {
+                try {
+                    const response = await fetch(`/User/GetMyReview?productId=${products[0].id}`);
+                    if (response.ok) existingReview = await response.json();
+                } catch { }
+            }
+            Swal.close();
+            profileOpenReviewModal(products[0].id, products[0].title, products[0].img, existingReview);
         } else {
+            // Если товаров несколько — сетка открывается МГНОВЕННО
             let gridHtml = '<div class="review-selection-grid">';
-            products.forEach(p => {
+            for (const p of products) {
+                let statusBadge = '';
+
+                // Опираемся на данные p.hasReview и p.rating, которые передал сервер
+                if (p.hasReview) {
+                    let starsHtml = '<div style="display: flex; justify-content: center; gap: 2px; color: #FFD700; font-size: 0.65rem; margin-top: 6px; margin-bottom: 2px;">';
+                    for (let i = 0; i < 5; i++) {
+                        if (i < p.rating) {
+                            starsHtml += '<i class="fa-solid fa-star"></i>';
+                        } else {
+                            starsHtml += '<i class="fa-solid fa-star" style="color: #eee;"></i>';
+                        }
+                    }
+                    starsHtml += '</div>';
+
+                    statusBadge = `
+                        ${starsHtml}
+                        <span style="display:block; font-size:0.6rem; color:#DCAEAE; font-weight:800; letter-spacing:0.5px;">РЕДАКТИРОВАТЬ</span>
+                    `;
+                } else {
+                    statusBadge = `<span style="display:block; margin-top:6px; font-size:0.65rem; color:#aaa; font-weight:800; letter-spacing:0.5px;">ОЦЕНИТЬ</span>`;
+                }
+
                 gridHtml += `
-                                <div class="review-sel-card" onclick="Swal.close(); profileOpenReviewModal(${p.id}, '${p.title.replace(/'/g, "\\'")}', '${p.img}')">
-                                    <img src="${p.img}" />
-                                    <p>${p.title}</p>
-                                </div>
-                            `;
-            });
+                    <div class="review-sel-card" onclick="Swal.close(); window.fetchAndOpenReview(${p.id}, '${p.title.replace(/'/g, "\\'")}', '${p.img}', ${p.hasReview})">
+                        <img src="${p.img}" />
+                        <p>${p.title}</p>
+                        ${statusBadge}
+                    </div>`;
+            }
             gridHtml += '</div>';
 
             Swal.fire({
-                title: 'ВЫБЕРИТЕ ТОВАР ДЛЯ ОТЗЫВА',
+                title: 'ВЫБЕРИТЕ ТОВАР',
                 html: gridHtml,
                 showConfirmButton: false,
                 showCancelButton: true,
                 cancelButtonText: 'ОТМЕНА',
-                customClass: {
-                    popup: 'vesna-popup',
-                    title: 'vesna-title',
-                    cancelButton: 'profile-cancel-btn'
-                },
+                customClass: { popup: 'vesna-popup', title: 'vesna-title', cancelButton: 'profile-cancel-btn' },
                 buttonsStyling: false
             });
         }
     };
 
-    window.profileOpenReviewModal = function (productId, productName, productImg) {
-        window.currentRating = 5;
+    // Функция, которая сработает при клике на карточку товара в сетке
+    window.fetchAndOpenReview = async function (id, title, img, hasReview) {
+        Swal.showLoading();
+        let existingReview = null;
+        // Лезем в базу за текстом отзыва только тогда, когда пользователь решил его открыть!
+        if (hasReview) {
+            try {
+                const response = await fetch(`/User/GetMyReview?productId=${id}`);
+                if (response.ok) existingReview = await response.json();
+            } catch { }
+        }
+        Swal.close();
+        profileOpenReviewModal(id, title, img, existingReview);
+    };
+
+    window.profileOpenReviewModal = function (productId, productName, productImg, existingReview = null) {
+        // Если отзыв есть, берем его рейтинг, иначе ставим 5
+        window.currentRating = existingReview ? existingReview.rating : 5;
 
         Swal.fire({
-            title: `ОСТАВИТЬ ОТЗЫВ`,
+            title: existingReview ? `РЕДАКТИРОВАТЬ ОТЗЫВ` : `ОСТАВИТЬ ОТЗЫВ`,
             html: `
-                            <div style="display:flex; flex-direction:column; gap:15px; text-align:left;">
-                                <div style="display: flex; gap: 15px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 5px;">
-                                    <img src="${productImg}" style="width: 55px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; flex-shrink: 0;" />
-                                    <div style="font-weight: 800; font-size: 0.9rem; color: #000; text-transform: uppercase; line-height: 1.4;">${productName}</div>
-                                </div>
-
-                                <div class="star-rating-select" id="star-selector">
-                                    <i class="fa-solid fa-star selected" data-val="1"></i>
-                                    <i class="fa-solid fa-star selected" data-val="2"></i>
-                                    <i class="fa-solid fa-star selected" data-val="3"></i>
-                                    <i class="fa-solid fa-star selected" data-val="4"></i>
-                                    <i class="fa-solid fa-star selected" data-val="5"></i>
-                                </div>
-
-                                <textarea id="rev-comment" class="vesna-input-bold" placeholder="Поделитесь вашим мнением о качестве вещи..." style="height:120px; resize:none;"></textarea>
-
-                                <label style="font-weight:800; font-size:0.65rem; color:#aaa; text-transform:uppercase; margin-bottom: -5px;">Прикрепить фото к отзыву</label>
-                                <input type="file" id="rev-image" class="vesna-input-bold" accept="image/*">
-                            </div>
-                        `,
+                    <div style="display:flex; flex-direction:column; gap:15px; text-align:left;">
+                        <div style="display: flex; gap: 15px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 5px;">
+                            <img src="${productImg}" style="width: 55px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; flex-shrink: 0;" />
+                            <div style="font-weight: 800; font-size: 0.9rem; color: #000; text-transform: uppercase; line-height: 1.4;">${productName}</div>
+                        </div>
+                        <div class="star-rating-select" id="star-selector">
+                            <i class="fa-solid fa-star" data-val="1"></i>
+                            <i class="fa-solid fa-star" data-val="2"></i>
+                            <i class="fa-solid fa-star" data-val="3"></i>
+                            <i class="fa-solid fa-star" data-val="4"></i>
+                            <i class="fa-solid fa-star" data-val="5"></i>
+                        </div>
+                        <textarea id="rev-comment" class="vesna-input-bold" placeholder="Поделитесь вашим мнением о качестве вещи..." style="height:120px; resize:none;"></textarea>
+                        <label style="font-weight:800; font-size:0.65rem; color:#aaa; text-transform:uppercase; margin-bottom: -5px;">Прикрепить фото к отзыву</label>
+                        <input type="file" id="rev-image" class="vesna-input-bold" accept="image/*">
+                    </div>
+                `,
             showCancelButton: true,
-            confirmButtonText: 'ОПУБЛИКОВАТЬ',
+            confirmButtonText: existingReview ? 'СОХРАНИТЬ ИЗМЕНЕНИЯ' : 'ОПУБЛИКОВАТЬ',
             cancelButtonText: 'ОТМЕНА',
             customClass: {
                 confirmButton: 'profile-rev-btn',
@@ -1024,11 +1074,35 @@
             buttonsStyling: false,
             didOpen: () => {
                 const stars = document.querySelectorAll('#star-selector i');
-                stars.forEach(s => s.onclick = () => {
-                    stars.forEach(i => i.classList.remove('selected'));
-                    let val = parseInt(s.getAttribute('data-val'));
-                    for (let i = 0; i < val; i++) stars[i].classList.add('active', 'selected');
-                    window.currentRating = val;
+                const commentField = document.getElementById('rev-comment');
+
+                if (existingReview) {
+                    commentField.value = existingReview.comment;
+
+                    const modalContainer = document.querySelector('.swal2-html-container');
+                    if (modalContainer) {
+                        const editNotice = document.createElement('p');
+                        editNotice.style.cssText = 'font-size:0.6rem; color:#DCAEAE; margin-top:5px; font-weight:800; text-transform:uppercase;';
+                        editNotice.innerText = 'Вы редактируете ваш предыдущий отзыв';
+                        commentField.parentNode.insertBefore(editNotice, commentField.nextSibling);
+                    }
+                }
+
+                const updateStars = (val) => {
+                    stars.forEach((s, idx) => {
+                        s.classList.toggle('selected', idx < val);
+                        s.classList.toggle('active', idx < val);
+                    });
+                };
+
+                updateStars(window.currentRating);
+
+                stars.forEach((s) => {
+                    s.onclick = () => {
+                        let val = parseInt(s.getAttribute('data-val'));
+                        window.currentRating = val;
+                        updateStars(val);
+                    };
                 });
             },
             preConfirm: async () => {
@@ -1039,7 +1113,7 @@
                 }
 
                 const fileInput = document.getElementById('rev-image').files[0];
-                let finalImageUrl = null;
+                let finalImageUrl = existingReview ? existingReview.imageUrl : null;
 
                 if (fileInput) {
                     Swal.showLoading();
@@ -1047,20 +1121,19 @@
                     uploaderData.append('image', fileInput);
 
                     try {
-                        const uploadResponse = await fetch('/Admin/ProxyUpload', {
+                        const uploadResponse = await fetch('/User/ProxyUpload', {
                             method: 'POST',
                             headers: { 'RequestVerificationToken': getProfileCsrfToken() },
                             body: uploaderData
                         });
 
                         if (!uploadResponse.ok) throw new Error('Ошибка при отправке фото в прокси');
-
                         const uploadResult = await uploadResponse.json();
 
                         if (uploadResult.success && uploadResult.data && uploadResult.data.url) {
-                            finalImageUrl = uploadResult.data.url; 
+                            finalImageUrl = uploadResult.data.url;
                         } else {
-                            throw new Error(uploadResult.message || 'Облако ImgBB отклонило изображение');
+                            throw new Error(uploadResult.message || 'Ошибка загрузки изображения');
                         }
                     } catch (err) {
                         Swal.showValidationMessage(`Ошибка загрузки фото: ${err.message}`);
@@ -1073,9 +1146,7 @@
                 reviewParams.append('productId', productId);
                 reviewParams.append('rating', window.currentRating);
                 reviewParams.append('comment', comment.trim());
-                if (finalImageUrl) {
-                    reviewParams.append('imageUrl', finalImageUrl);
-                }
+                if (finalImageUrl) reviewParams.append('imageUrl', finalImageUrl);
 
                 try {
                     const response = await fetch('/User/SubmitReview', {
@@ -1087,11 +1158,9 @@
                         body: reviewParams.toString()
                     });
 
-                    if (!response.ok) throw new Error(`Ошибка сервера (Статус ${response.status})`);
-
+                    if (!response.ok) throw new Error(`Ошибка сервера`);
                     const data = await response.json();
                     if (!data.success) throw new Error(data.message || 'Не удалось сохранить отзыв');
-
                     return data;
                 } catch (err) {
                     Swal.showValidationMessage(`Ошибка сохранения: ${err.message}`);
@@ -1100,8 +1169,13 @@
             }
         }).then(result => {
             if (result.value && result.value.success) {
-                Swal.fire({ icon: 'success', title: 'ОПУБЛИКОВАНО', text: 'Спасибо за ваш отзыв!', showConfirmButton: false, timer: 2000 })
-                    .then(() => location.reload());
+                Swal.fire({
+                    icon: 'success',
+                    title: existingReview ? 'ОБНОВЛЕНО' : 'ОПУБЛИКОВАНО',
+                    text: 'Спасибо за ваш отзыв!',
+                    showConfirmButton: false,
+                    timer: 2000
+                }).then(() => location.reload());
             }
         });
     };
@@ -1127,6 +1201,7 @@
                 if (data.success) { document.getElementById('display-name').innerText = name; profileToggleEdit('name-form'); }
             });
     };
+
     window.profileRequestEmailCode = function () {
         const newEmail = document.getElementById('input-email').value.trim();
         if (!newEmail) {
@@ -1163,7 +1238,6 @@
             });
     };
 
-
     window.profileVerifyAndSaveEmail = function () {
         const code = document.getElementById('input-email-code').value.trim();
         if (!code) {
@@ -1187,10 +1261,8 @@
                 btn.disabled = false;
 
                 if (data.success) {
-
                     document.getElementById('display-email').innerText = data.newEmail;
                     profileToggleEdit('email-form');
-
 
                     document.getElementById('input-email').value = '';
                     document.getElementById('input-email-code').value = '';
@@ -1208,7 +1280,6 @@
                 console.error(err);
             });
     };
-
 
     window.profileSavePassword = function () {
         const oldP = document.getElementById('old-pass').value;

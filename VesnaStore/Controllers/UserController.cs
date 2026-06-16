@@ -40,6 +40,7 @@ namespace VesnaStore.Controllers
                 .Include(u => u.Orders)
                     .ThenInclude(o => o.OrderItems)
                         .ThenInclude(oi => oi.Product)
+                            .ThenInclude(p => p.Reviews)
                 .FirstOrDefaultAsync(u => u.UserID == userId);
 
             if (user == null)
@@ -108,7 +109,7 @@ namespace VesnaStore.Controllers
 
                     using (var client = new System.Net.Mail.SmtpClient("smtp.gmail.com"))
                     {
-                        client.Port = 587; 
+                        client.Port = 587;
                         client.Credentials = new System.Net.NetworkCredential("fogetw@gmail.com", "bdsdrcwoguatkecs");
                         client.EnableSsl = true;
                         await client.SendMailAsync(message);
@@ -120,6 +121,21 @@ namespace VesnaStore.Controllers
                 System.Diagnostics.Debug.WriteLine($"Критическая ошибка отправки почты: {ex.Message}");
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ProxyUpload(IFormFile image)
+        {
+            var apiKey = _configuration["ApiKeys:ImgBB"];
+            using var client = new HttpClient();
+            var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(image.OpenReadStream());
+            content.Add(fileContent, "image", image.FileName);
+
+            var response = await client.PostAsync($"https://api.imgbb.com/1/upload?key={apiKey}", content);
+            var result = await response.Content.ReadAsStringAsync();
+            return Content(result, "application/json");
+        }
+
         [HttpPost]
         public async Task<IActionResult> ChangeEmail(string newEmail, string code)
         {
@@ -173,23 +189,40 @@ namespace VesnaStore.Controllers
                 return Json(new { success = false, message = "Пожалуйста, заполните текст отзыва." });
 
             int userId = int.Parse(userIdStr);
-            var user = await _context.Users.FindAsync(userId);
 
-            var review = new Review
-            {
-                ProductID = productId,
-                UserID = userId,
-                UserName = user?.FullName ?? "Аноним",
-                Comment = comment.Trim(),
-                Rating = rating,
-                IsApproved = true,
-                CreatedAt = DateTime.Now,
-                ReviewImageUrl = imageUrl
-            };
+            // Ищем уже существующий отзыв пользователя на этот товар
+            var existingReview = _context.Reviews
+                .FirstOrDefault(r => r.ProductID == productId && r.UserID == userId);
 
             try
             {
-                _context.Reviews.Add(review);
+                if (existingReview != null)
+                {
+                    // ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕГО
+                    existingReview.Comment = comment.Trim();
+                    existingReview.Rating = rating;
+                    existingReview.ReviewImageUrl = imageUrl; // Обновляем ссылку на фото (если есть)
+                    existingReview.CreatedAt = DateTime.Now; // Обновляем дату
+                                                             // IsApproved можно оставить true или сбросить на false, если нужна повторная модерация
+                }
+                else
+                {
+                    // СОЗДАНИЕ НОВОГО
+                    var user = await _context.Users.FindAsync(userId);
+                    var review = new Review
+                    {
+                        ProductID = productId,
+                        UserID = userId,
+                        UserName = user?.FullName ?? "Аноним",
+                        Comment = comment.Trim(),
+                        Rating = rating,
+                        IsApproved = true,
+                        CreatedAt = DateTime.Now,
+                        ReviewImageUrl = imageUrl
+                    };
+                    _context.Reviews.Add(review);
+                }
+
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
             }
