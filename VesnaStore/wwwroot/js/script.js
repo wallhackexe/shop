@@ -62,13 +62,11 @@ window.resetDZoom = function () {
     });
 };
 
-// 4. Открытие/закрытие фильтров на мобилках в каталоге
 window.toggleMobileFilters = function () {
     const sidebar = document.getElementById('filterSidebar');
     if (sidebar) {
         sidebar.classList.toggle('active');
 
-        // Отключаем скролл сайта, когда меню фильтров открыто
         if (sidebar.classList.contains('active')) {
             document.body.style.overflow = 'hidden';
         } else {
@@ -101,30 +99,25 @@ window.toggleLike = function (productId, btn) {
         }
     };
 
-    // 1. Optimistic UI
     setIconActive(!isCurrentlyActive);
 
-    // 2. Подготовка данных
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-    // Используем FormData — это стандарт де-факто для POST запросов в ASP.NET Core
     const formData = new FormData();
     formData.append('productId', productId);
 
-    // Убираем параметры из URL, передаем их в body
     fetch('/Account/ToggleFavorite', {
         method: 'POST',
         headers: {
             'RequestVerificationToken': token,
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: formData // Отправляем данные как форму
+        body: formData 
     })
         .then(res => {
             if (res.status === 401) {
-                setIconActive(isCurrentlyActive); // Откат
+                setIconActive(isCurrentlyActive);
 
-                // SweetAlert... (твоя логика без изменений)
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: 'НУЖНА АВТОРИЗАЦИЯ',
@@ -154,12 +147,11 @@ window.toggleLike = function (productId, btn) {
         })
         .catch(err => {
             console.error('Ошибка AJAX лайка:', err);
-            setIconActive(isCurrentlyActive); // Откат при ошибке
+            setIconActive(isCurrentlyActive);
         });
 };
 // 6. Переключение табов в Личном Кабинете
 window.switchProfileTab = function (tabName, btn) {
-    // 1. Стандартная логика переключения
     const contents = document.querySelectorAll('.tab-content-item');
     contents.forEach(c => c.style.display = 'none');
 
@@ -172,9 +164,7 @@ window.switchProfileTab = function (tabName, btn) {
         btn.classList.add('active');
     }
 
-    // 2. ДОБАВЛЯЕМ ПЛАВНЫЙ СКРОЛЛ НА МОБИЛКАХ
     if (window.innerWidth <= 992) {
-        // Задержка небольшая, чтобы контент успел отобразиться (display: block)
         setTimeout(() => {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -189,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- 1. АДМИНКА: БОКОВОЕ МЕНЮ ---
     const burger = document.getElementById('burger');
     const sidebar = document.getElementById('sidebar');
-    const adminOverlay = document.getElementById('overlay'); // Admin overlay
+    const adminOverlay = document.getElementById('overlay');
 
     if (burger && sidebar && adminOverlay) {
         const toggleMenu = () => {
@@ -209,7 +199,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const statusText = document.getElementById('uploadStatus');
             const previewBlock = document.getElementById('previewBlock');
-            // Если этот инпут есть — мы в "Добавлении товара", если нет — мы в "Медиатеке"
             const imageUrlInput = document.getElementById('imgInput');
 
             if (statusText) {
@@ -226,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const response = await fetch('/Admin/ProxyUpload', {
                         method: 'POST',
-                        headers: { 'RequestVerificationToken': getCsrfToken() }, // ДОБАВИЛИ
+                        headers: { 'RequestVerificationToken': getCsrfToken() },
                         body: formData
                     });
                     const data = await response.json();
@@ -235,20 +224,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         successCount++;
                         if (statusText) statusText.innerText = `Загрузка: ${successCount} из ${files.length}...`;
 
-                        // СЦЕНАРИЙ А: Мы добавляем/редактируем товар
                         if (imageUrlInput) {
                             imageUrlInput.value = data.data.url;
                             if (previewBlock) {
                                 previewBlock.innerHTML = `<img src="${data.data.url}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px;" />`;
                             }
                         }
-                        // СЦЕНАРИЙ Б: Мы в Медиатеке
                         else {
                             await fetch('/Admin/SaveMediaUrl', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'RequestVerificationToken': getCsrfToken() // ДОБАВИЛИ
+                                    'RequestVerificationToken': getCsrfToken()
                                 },
                                 body: JSON.stringify(data.data.url)
                             });
@@ -263,12 +250,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Финал загрузки
             if (statusText) {
                 statusText.style.color = '#27ae60';
                 statusText.innerText = `Готово! Загружено ${successCount} фото.`;
 
-                // Перезагружаем страницу только если мы в Медиатеке
                 if (!imageUrlInput) {
                     setTimeout(() => location.reload(), 1000);
                 }
@@ -300,21 +285,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     ratingContainers.forEach(container => {
         const stars = container.querySelectorAll('i');
-        const input = container.querySelector('input'); // Скрытый инпут для значения
+        const input = container.querySelector('input');
 
         stars.forEach(star => {
-            // Наведение (подсветка)
             star.addEventListener('mouseover', function () {
                 const val = this.dataset.value;
                 highlightStars(stars, val);
             });
 
-            // Уход мыши (возврат к выбранному значению)
             star.addEventListener('mouseleave', function () {
                 highlightStars(stars, input.value);
             });
 
-            // Клик (фиксация оценки)
             star.addEventListener('click', function () {
                 input.value = this.dataset.value;
                 highlightStars(stars, input.value);
@@ -382,10 +364,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.success) {
                     localStorage.removeItem('guest_cart');
 
-                    // МГНОВЕННОЕ ОБНОВЛЕНИЕ ЦИФРЫ (без перезагрузки)
                     updateCartVisuals(data.cartCount);
 
-                    // Если мы уже в корзине — перезагружаем, чтобы отрисовать список товаров
                     if (window.location.pathname.toLowerCase().includes('/cart')) {
                         location.reload();
                     }
@@ -394,7 +374,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             .catch(err => console.error("Ошибка синхронизации:", err));
     }
 
-    // Функция обновления (оставляем твою, она хорошая)
     function updateCartVisuals(exactCount = null) {
         if (!cartBadge) return;
 
@@ -741,12 +720,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (acceptCookiesBtn) acceptCookiesBtn.onclick = () => { localStorage.setItem('cookieConsentAccepted', 'true'); cookieBanner.style.display = 'none'; };
 });
 
-// Переключение видимости форм
 window.toggleEdit = function (formId) {
     const form = document.getElementById(formId);
     const allForms = document.querySelectorAll('.s-edit-form');
 
-    // Закрываем другие, если открыты
     allForms.forEach(f => {
         if (f.id !== formId) f.style.display = 'none';
     });
@@ -754,7 +731,6 @@ window.toggleEdit = function (formId) {
     form.style.display = form.style.display === 'block' ? 'none' : 'block';
 };
 
-// Сохранение имени
 window.saveName = function () {
     const name = document.getElementById('input-name').value;
     fetch('/User/UpdateName?fullName=' + encodeURIComponent(name), { method: 'POST' })
@@ -786,7 +762,6 @@ window.savePassword = function () {
         });
 };
 
-// Смена почты (с заглушкой кода)
 window.saveEmail = function () {
     const email = document.getElementById('input-email').value;
     const code = document.getElementById('input-email-code').value;
@@ -806,10 +781,8 @@ window.saveEmail = function () {
 // 1. Обработка выбора товара из заказа
 window.handleReviewSelection = function (products) {
     if (products.length === 1) {
-        // Если товар один - сразу к отзыву
         openReviewModal(products[0].id, products[0].title);
     } else {
-        // Если товаров несколько - показываем выбор
         let productsHtml = '<div class="review-selection-grid">';
         products.forEach(p => {
             productsHtml += `
@@ -840,7 +813,6 @@ function drawModalLines(card) {
     const img = container.lastElementChild;
     if (!img || img.tagName !== 'IMG') return;
 
-    // Очистим старые линии, если они вдруг остались
     const existing = container.querySelector('#modal-wrapper');
     if (existing) existing.remove();
 
@@ -854,7 +826,6 @@ function drawModalLines(card) {
     const labels = wrapper.querySelector('#modal-labels');
 
     ['a', 'b', 'c'].forEach(l => {
-        // Формируем ключи, которые в HTML: sxa, sya, exa, eya...
         const sx = card.dataset['sx' + l];
         const ex = card.dataset['ex' + l];
 

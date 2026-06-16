@@ -190,7 +190,6 @@ namespace VesnaStore.Controllers
 
             int userId = int.Parse(userIdStr);
 
-            // Ищем уже существующий отзыв пользователя на этот товар
             var existingReview = _context.Reviews
                 .FirstOrDefault(r => r.ProductID == productId && r.UserID == userId);
 
@@ -198,16 +197,14 @@ namespace VesnaStore.Controllers
             {
                 if (existingReview != null)
                 {
-                    // ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕГО
                     existingReview.Comment = comment.Trim();
                     existingReview.Rating = rating;
-                    existingReview.ReviewImageUrl = imageUrl; // Обновляем ссылку на фото (если есть)
-                    existingReview.CreatedAt = DateTime.Now; // Обновляем дату
-                                                             // IsApproved можно оставить true или сбросить на false, если нужна повторная модерация
+                    existingReview.ReviewImageUrl = imageUrl;
+                    existingReview.CreatedAt = DateTime.Now;
+
                 }
                 else
                 {
-                    // СОЗДАНИЕ НОВОГО
                     var user = await _context.Users.FindAsync(userId);
                     var review = new Review
                     {

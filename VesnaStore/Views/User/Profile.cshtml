@@ -880,7 +880,6 @@
 
                                     @if (order.Status == "Завершен")
                                     {
-                                        // Достаем отзыв прямо здесь и сразу сохраняем рейтинг!
                                         var itemsData = order.OrderItems.Select(oi =>
                                         {
                                             var userReview = oi.Product?.Reviews?.FirstOrDefault(r => r.UserID == Model.UserID);
@@ -964,7 +963,6 @@
         const rawData = button.getAttribute('data-products');
         const products = JSON.parse(rawData);
 
-        // Если товар всего один в заказе
         if (products.length === 1) {
             Swal.showLoading();
             let existingReview = null;
@@ -977,12 +975,10 @@
             Swal.close();
             profileOpenReviewModal(products[0].id, products[0].title, products[0].img, existingReview);
         } else {
-            // Если товаров несколько — сетка открывается МГНОВЕННО
             let gridHtml = '<div class="review-selection-grid">';
             for (const p of products) {
                 let statusBadge = '';
 
-                // Опираемся на данные p.hasReview и p.rating, которые передал сервер
                 if (p.hasReview) {
                     let starsHtml = '<div style="display: flex; justify-content: center; gap: 2px; color: #FFD700; font-size: 0.65rem; margin-top: 6px; margin-bottom: 2px;">';
                     for (let i = 0; i < 5; i++) {
@@ -1023,11 +1019,9 @@
         }
     };
 
-    // Функция, которая сработает при клике на карточку товара в сетке
     window.fetchAndOpenReview = async function (id, title, img, hasReview) {
         Swal.showLoading();
         let existingReview = null;
-        // Лезем в базу за текстом отзыва только тогда, когда пользователь решил его открыть!
         if (hasReview) {
             try {
                 const response = await fetch(`/User/GetMyReview?productId=${id}`);
@@ -1039,7 +1033,6 @@
     };
 
     window.profileOpenReviewModal = function (productId, productName, productImg, existingReview = null) {
-        // Если отзыв есть, берем его рейтинг, иначе ставим 5
         window.currentRating = existingReview ? existingReview.rating : 5;
 
         Swal.fire({
