@@ -70,6 +70,10 @@
             <div class="cart-summary">
                 <form asp-controller="Cart" asp-action="Checkout" method="post">
                     @Html.AntiForgeryToken()
+
+                    @* НОВОЕ: СКРЫТОЕ ПОЛЕ ДЛЯ ПЕРЕДАЧИ ПРОМОКОДА НА СЕРВЕР *@
+                    <input type="hidden" id="appliedPromoCode" name="appliedPromoCode" value="" />
+
                     <h3 style="font-family: 'Playfair Display'; font-size: 1.6rem; margin-bottom: 25px;">Оформление заказа</h3>
 
                     <div style="margin-bottom: 20px;">
@@ -150,6 +154,8 @@
                 const newTotal = originalTotal - data.discount;
                 document.getElementById('cartTotal').innerText = newTotal.toLocaleString('ru-RU');
 
+                document.getElementById('appliedPromoCode').value = data.code;
+
                 Swal.fire({ icon: 'success', title: 'Скидка применена!', text: `Ваша выгода: ${data.discount} ₽`, timer: 2000 });
             } else {
                 Swal.fire({ icon: 'error', title: 'Ошибка', text: data.message });
@@ -164,5 +170,7 @@
         document.getElementById('promo-input-area').style.display = 'flex';
         document.getElementById('promo-applied-area').style.display = 'none';
         document.getElementById('promoCode').value = '';
+
+        document.getElementById('appliedPromoCode').value = '';
     }
 </script>

@@ -237,7 +237,7 @@ namespace VesnaStore.Controllers
 
         // --- 6. ОФОРМЛЕНИЕ ЗАКАЗА ---
         [HttpPost]
-        public async Task<IActionResult> Checkout(string phone, string social, string address)
+        public async Task<IActionResult> Checkout(string phone, string social, string address, string appliedPromoCode)
         {
             if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(address))
             {
@@ -265,11 +265,28 @@ namespace VesnaStore.Controllers
                 }
             }
 
+            decimal totalAmount = cartItems.Sum(item => item.Product.Price * item.Quantity);
+
+            if (!string.IsNullOrWhiteSpace(appliedPromoCode))
+            {
+                string cleanCode = appliedPromoCode.Trim().ToUpper();
+                var promo = await _context.PromoCodes
+                    .FirstOrDefaultAsync(p => p.Code == cleanCode && p.IsActive);
+
+                if (promo != null && promo.UsedCount < promo.MaxUses && totalAmount >= promo.MinOrderAmount)
+                {
+                    totalAmount -= promo.DiscountAmount;
+                    if (totalAmount < 0) totalAmount = 0;
+
+                    promo.UsedCount += 1;
+                }
+            }
+
             var order = new Order
             {
                 UserID = userId,
                 OrderDate = DateTime.Now,
-                TotalAmount = cartItems.Sum(item => item.Product.Price * item.Quantity),
+                TotalAmount = totalAmount, 
                 Status = "Новый",
                 Phone = phone,
                 SocialLink = !string.IsNullOrWhiteSpace(social) ? social : "Не указано",
@@ -277,7 +294,7 @@ namespace VesnaStore.Controllers
             };
 
             _context.Orders.Add(order);
-            await _context.SaveChangesAsync(); 
+            await _context.SaveChangesAsync();
 
             foreach (var item in cartItems)
             {
@@ -291,7 +308,6 @@ namespace VesnaStore.Controllers
 
                 item.Product.StockQuantity -= item.Quantity;
             }
-
 
             _context.CartItems.RemoveRange(cartItems);
             await _context.SaveChangesAsync();

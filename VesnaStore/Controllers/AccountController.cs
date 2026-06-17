@@ -183,6 +183,19 @@ namespace VesnaStore.Controllers
             {
                 HttpContext.Session.Remove("LoginAttempts");
 
+                // --- НОВОЕ: ПРОВЕРКА КУКИ ДОВЕРЕННОГО УСТРОЙСТВА ---
+                string trustedCookieName = $"VesnaTrusted_{user.UserID}";
+                if (Request.Cookies.ContainsKey(trustedCookieName))
+                {
+                    // Кука есть! Пропускаем отправку кода и сразу логиним пользователя.
+                    await SignInUserAsync(user);
+
+                    TempData["Success"] = "С возвращением!";
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+                    return RedirectToAction("Index", "Home");
+                }
+
+                // Устройство неизвестно (куки нет), запрашиваем код подтверждения
                 Random rand = new Random();
                 string verificationCode = rand.Next(100000, 999999).ToString();
 
@@ -217,7 +230,8 @@ namespace VesnaStore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> VerifyLoginCode(string code)
+        // НОВОЕ: Добавили параметр rememberDevice
+        public async Task<IActionResult> VerifyLoginCode(string code, string rememberDevice)
         {
             string sessionCode = HttpContext.Session.GetString("LoginVerificationCode");
             int? userId = HttpContext.Session.GetInt32("PendingUserId");
@@ -227,19 +241,24 @@ namespace VesnaStore.Controllers
                 var user = await _context.Users.FindAsync(userId.Value);
                 if (user != null)
                 {
-                    var claims = new List<Claim>
+                    // --- НОВОЕ: СОХРАНЯЕМ ДОВЕРЕННОЕ УСТРОЙСТВО ---
+                    if (!string.IsNullOrEmpty(rememberDevice) && (rememberDevice == "on" || rememberDevice == "true"))
                     {
-                        new Claim(ClaimTypes.Name, user.Email),
-                        new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                        new Claim(ClaimTypes.Role, user.UserRole),
-                        new Claim("FullName", user.FullName ?? "")
-                    };
+                        var cookieOptions = new CookieOptions
+                        {
+                            Expires = DateTime.Now.AddDays(30), // Запоминаем устройство на 30 дней
+                            HttpOnly = true,
+                            Secure = true,
+                            IsEssential = true
+                        };
 
-                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    var principal = new ClaimsPrincipal(identity);
+                        Response.Cookies.Append($"VesnaTrusted_{user.UserID}", "trusted", cookieOptions);
+                    }
 
-                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                    // Авторизуем пользователя
+                    await SignInUserAsync(user);
 
+                    // Очищаем временные данные из сессии
                     HttpContext.Session.Remove("LoginVerificationCode");
                     HttpContext.Session.Remove("PendingUserId");
 
@@ -258,6 +277,23 @@ namespace VesnaStore.Controllers
 
             TempData["Error"] = "Неверный или устаревший код подтверждения.";
             return View();
+        }
+
+        // --- ВЫНЕСЕННАЯ ЛОГИКА АВТОРИЗАЦИИ (Чтобы не дублировать код) ---
+        private async Task SignInUserAsync(User user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+                new Claim(ClaimTypes.Role, user.UserRole),
+                new Claim("FullName", user.FullName ?? "")
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
         }
 
         // --- ВОССТАНОВЛЕНИЕ ПАРОЛЯ ---
@@ -326,7 +362,7 @@ namespace VesnaStore.Controllers
 
             if (user != null && !string.IsNullOrWhiteSpace(newPassword))
             {
-                user.PasswordHash = newPassword; 
+                user.PasswordHash = newPassword;
                 _context.Update(user);
                 await _context.SaveChangesAsync();
 
